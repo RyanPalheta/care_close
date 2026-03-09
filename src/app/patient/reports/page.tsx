@@ -142,7 +142,7 @@ function ReportsContent() {
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
                         Você tomou {overallTaken} de {overallTotal} doses
-                        {period === 1 ? ' hoje' : ` nos últimos ${period} dias`}.
+                        nos últimos {period} dias.
                     </p>
 
                     {/* Share buttons */}

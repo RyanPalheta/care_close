@@ -31,7 +31,7 @@ interface MedSchedule {
 }
 
 export default function CaregiverSchedulePage() {
-    const { user, authLoading } = useAuth()
+    const { user, loading: authLoading } = useAuth()
 
     const [schedules, setSchedules] = useState<MedSchedule[]>([])
     const [loading, setLoading] = useState(true)

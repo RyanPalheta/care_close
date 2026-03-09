@@ -42,7 +42,7 @@ export default function CaregiverPatientPage({ params }: { params: Promise<{ id:
     const resolvedParams = use(params)
     const patientId = resolvedParams.id
     const router = useRouter()
-    const { user, authLoading } = useAuth()
+    const { user, loading: authLoading } = useAuth()
 
     const [patient, setPatient] = useState<Patient | null>(null)
     const [schedules, setSchedules] = useState<MedSchedule[]>([])
