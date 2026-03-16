@@ -33,16 +33,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null)
-            if (session?.user) fetchProfile(session.user.id)
-            else setLoading(false)
+            if (session?.user) {
+                setUser(session.user)
+                fetchProfile(session.user.id)
+            } else {
+                setUser(null)
+                setLoading(false)
+            }
         })
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
-            if (session?.user) fetchProfile(session.user.id)
+            if (session?.user) {
+                // If we just logged in, user state changes but profile needs to be fetched
+                // Set loading to true so we don't abort early in auth/page.tsx
+                setLoading(true)
+                setUser(session.user)
+                fetchProfile(session.user.id)
+            }
             else {
+                setUser(null)
                 setProfile(null)
                 setLoading(false)
             }
@@ -52,13 +62,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     async function fetchProfile(userId: string) {
-        const { data } = await supabase
-            .from('users')
-            .select('id, name, role, avatar_url')
-            .eq('id', userId)
-            .single()
-        setProfile(data)
-        setLoading(false)
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('id, name, role, avatar_url')
+                .eq('id', userId)
+                .single()
+            
+            if (error) {
+                console.error("fetchProfile Superbase error:", error)
+            }
+            setProfile(data)
+        } catch (err) {
+            console.error("fetchProfile exception:", err)
+            setProfile(null)
+        } finally {
+            setLoading(false)
+        }
     }
 
     async function signOut() {

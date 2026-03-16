@@ -23,13 +23,25 @@ function AuthForm() {
 
     // Redirect if already logged in
     useEffect(() => {
-        if (!authLoading && user && profile) {
-            if (profile.role === 'caregiver') {
-                router.replace('/caregiver/home')
-            } else if (profile.role === 'institution') {
-                router.replace('/institution/dashboard')
+        // If still loading auth state, do nothing
+        if (authLoading) return;
+
+        if (user) {
+            if (profile) {
+                // Happy path: User and Profile are loaded
+                if (profile.role === 'caregiver') {
+                    router.replace('/caregiver/home')
+                } else if (profile.role === 'institution') {
+                    router.replace('/institution/dashboard')
+                } else {
+                    router.replace('/patient/home')
+                }
             } else {
-                router.replace('/patient/home')
+                // Edge case: User is authenticated but profile is strictly null AND we finished loading.
+                // This means profile creation failed during sign up or there's a database mismatch.
+                supabase.auth.signOut().then(() => {
+                    setError('Seu perfil está incompleto. Por favor, crie uma nova conta ou contate o suporte.')
+                })
             }
         }
     }, [user, profile, authLoading, router])
