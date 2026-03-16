@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* =============================================
+   CARE CLORE — Design System
+   Brand: #42b6f0 (Sky Blue), Font: Lexend
+   Mode: Light, Roundness: Full
+   ============================================= */
+
+@theme {
+  /* Brand Colors */
+  --color-brand: #42b6f0;
+  --color-brand-light: #e0f4fd;
+  --color-brand-dark: #1a9dd8;
+  --color-brand-soft: #bae6fd;
+
+  /* Semantic Colors */
+  --color-success: #4ade80;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #fb923c;
+  --color-warning-bg: #fff7ed;
+  --color-danger: #f87171;
+  --color-danger-bg: #fef2f2;
+
+  /* Neutral */
+  --color-surface: #ffffff;
+  --color-background: #f0f9ff;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+
+  /* Typography */
+  --font-lexend: 'Lexend', sans-serif;
+
+  /* Border Radius (Rounded Full feel) */
+  --radius-btn: 9999px;
+  --radius-card: 1.25rem;
+  --radius-input: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 2px 16px 0 rgba(66, 182, 240, 0.10);
+  --shadow-btn: 0 4px 14px 0 rgba(66, 182, 240, 0.30);
+}
+
+/* Global base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-lexend);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+/* =============================================
+   UTILITY CLASSES
+   ============================================= */
+
+/* Cards */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 1.25rem;
+}
+
+.card-brand {
+  background: linear-gradient(135deg, #42b6f0 0%, #1a9dd8 100%);
+  border-radius: var(--radius-card);
+  color: white;
+  padding: 1.25rem;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #42b6f0 0%, #1a9dd8 100%);
+  color: white;
+  border-radius: var(--radius-btn);
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: var(--shadow-btn);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(66, 182, 240, 0.40);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--color-brand-light);
+  color: var(--color-brand-dark);
+  border-radius: var(--radius-btn);
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-btn);
+  padding: 0.875rem 2rem;
+  font-weight: 500;
+  font-size: 1rem;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Inputs */
+.input-field {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: var(--radius-input);
+  border: 2px solid var(--color-border);
+  font-family: var(--font-lexend);
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px rgba(66, 182, 240, 0.15);
+}
+
+.input-field::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Page layout */
+.page-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 28rem;
+  background: white;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.75rem 0 1rem;
+  z-index: 50;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.bottom-nav-item.active {
+  color: var(--color-brand);
+}
+
+/* Status badges */
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-success { background: var(--color-success-bg); color: #16a34a; }
+.badge-warning { background: var(--color-warning-bg); color: #ea580c; }
+.badge-danger  { background: var(--color-danger-bg);  color: #dc2626; }
+.badge-brand   { background: var(--color-brand-light); color: var(--color-brand-dark); }
+
+/* Micro-animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-brand {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(66, 182, 240, 0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(66, 182, 240, 0); }
+}
+
+.animate-up { animation: fadeInUp 0.4s ease forwards; }
+.pulse-brand { animation: pulse-brand 2s infinite; }
