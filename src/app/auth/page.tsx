@@ -20,11 +20,14 @@ function AuthForm() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [message, setMessage] = useState<string | null>(null)
+    const [isSigningUp, setIsSigningUp] = useState(false)
+
+    const [needsProfileRepair, setNeedsProfileRepair] = useState(false)
 
     // Redirect if already logged in
     useEffect(() => {
-        // If still loading auth state, do nothing
-        if (authLoading) return;
+        // If still loading auth state or currently signing up, do nothing
+        if (authLoading || isSigningUp) return;
 
         if (user) {
             if (profile) {
@@ -37,14 +40,56 @@ function AuthForm() {
                     router.replace('/patient/home')
                 }
             } else {
-                // Edge case: User is authenticated but profile is strictly null AND we finished loading.
-                // This means profile creation failed during sign up or there's a database mismatch.
-                supabase.auth.signOut().then(() => {
-                    setError('Seu perfil está incompleto. Por favor, crie uma nova conta ou contate o suporte.')
-                })
+                // Edge case: User is authenticated but profile is missing.
+                // Instead of signing out, show a profile repair form.
+                setNeedsProfileRepair(true)
+                setError('Seu perfil está incompleto. Complete seus dados abaixo para continuar.')
             }
         }
-    }, [user, profile, authLoading, router])
+    }, [user, profile, authLoading, router, isSigningUp])
+
+    // Handle profile repair for users missing their profile row
+    async function handleProfileRepair(e: React.FormEvent) {
+        e.preventDefault()
+        if (!user) return
+        setLoading(true)
+        setError(null)
+
+        if (!name.trim()) {
+            setError('Por favor, informe seu nome.')
+            setLoading(false)
+            return
+        }
+
+        // Use upsert to handle cases where the row already exists but RLS blocks SELECT
+        const { error: upsertErr } = await supabase.from('users').upsert({
+            id: user.id,
+            name: name.trim(),
+            role,
+        }, { onConflict: 'id' })
+
+        if (upsertErr) {
+            console.error('Profile repair upsert error:', upsertErr)
+            setError('Erro ao salvar perfil: ' + upsertErr.message)
+            setLoading(false)
+            return
+        }
+
+        // If patient, also create patient entry (upsert to avoid duplicate)
+        if (role === 'patient') {
+            await supabase.from('patients').upsert({
+                user_id: user.id,
+                license_id: null,
+            }, { onConflict: 'user_id' })
+        }
+
+        // Hard redirect to pick up the new profile
+        if (role === 'caregiver') {
+            window.location.href = '/caregiver/home'
+        } else {
+            window.location.href = '/patient/home'
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -69,8 +114,11 @@ function AuthForm() {
                 return
             }
 
+            setIsSigningUp(true)
+
             const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
             if (signUpError) {
+                setIsSigningUp(false)
                 setLoading(false)
                 setError(signUpError.message)
                 return
@@ -81,26 +129,40 @@ function AuthForm() {
                 const { error: insertErr } = await supabase.from('users').insert({
                     id: data.user.id,
                     name: name.trim(),
-                    email,
                     role,
                 })
-                if (insertErr) console.error('User insert error:', insertErr)
+                if (insertErr) {
+                    console.error('User insert error:', insertErr)
+                    setIsSigningUp(false)
+                    setLoading(false)
+                    setError('Conta criada, mas houve um erro ao salvar seu perfil. Faça login novamente para completar seu perfil.')
+                    return
+                }
 
                 // If patient role, create patient entry
                 if (role === 'patient') {
-                    await supabase.from('patients').insert({
+                    const { error: patientErr } = await supabase.from('patients').insert({
                         user_id: data.user.id,
                         license_id: null,
                     })
+                    if (patientErr) console.error('Patient insert error:', patientErr)
                 }
             }
 
             if (!data.session) {
+                setIsSigningUp(false)
                 setLoading(false)
                 setMessage('Conta criada! Verifique seu email para confirmar e depois faça login.')
                 return
             }
-            // If session exists (email confirm disabled), redirect will happen via AuthProvider
+            
+            // Hard redirect to ensure new AuthContext session picks up the newly inserted profile
+            if (role === 'caregiver') {
+                window.location.href = '/caregiver/home'
+            } else {
+                window.location.href = '/patient/home'
+            }
+            return;
         }
 
         setLoading(false)
@@ -136,6 +198,72 @@ function AuthForm() {
 
             {/* Form */}
             <div className="flex-1 px-6">
+                {/* Profile Repair Form — shown when user is authenticated but profile is missing */}
+                {needsProfileRepair && user ? (
+                    <form onSubmit={handleProfileRepair} className="flex flex-col gap-4">
+                        {error && (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-2xl px-4 py-3">
+                                {error}
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Nome completo</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                placeholder="Seu nome"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                required
+                                autoComplete="name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-semibold text-gray-700 mb-2 block">Sou um...</label>
+                            <div className="flex gap-3">
+                                {([
+                                    { value: 'patient', label: '👤 Paciente' },
+                                    { value: 'caregiver', label: '🩺 Cuidador' },
+                                ] as const).map(r => (
+                                    <button
+                                        key={r.value}
+                                        type="button"
+                                        onClick={() => setRole(r.value)}
+                                        className={`flex-1 py-3 rounded-2xl text-sm font-bold border-2 transition-all
+                                            ${role === r.value
+                                                ? 'bg-[#42b6f0] border-[#42b6f0] text-white shadow-md shadow-[#42b6f0]/30'
+                                                : 'bg-white border-gray-200 text-gray-600'
+                                            }`}
+                                    >
+                                        {r.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button type="submit" className="btn-primary mt-2" disabled={loading}>
+                            {loading
+                                ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto block" />
+                                : 'Completar perfil'
+                            }
+                        </button>
+
+                        <button
+                            type="button"
+                            className="text-sm text-gray-400 mt-2"
+                            onClick={() => {
+                                supabase.auth.signOut()
+                                setNeedsProfileRepair(false)
+                                setError(null)
+                            }}
+                        >
+                            Sair e usar outra conta
+                        </button>
+                    </form>
+                ) : (
+                <>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-2xl px-4 py-3">
@@ -244,6 +372,8 @@ function AuthForm() {
                         {isLogin ? 'Criar conta' : 'Entrar'}
                     </button>
                 </div>
+                </>
+                )}
             </div>
         </div>
     )
