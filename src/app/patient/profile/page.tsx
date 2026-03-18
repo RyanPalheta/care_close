@@ -58,7 +58,13 @@ export default function PatientProfilePage() {
 
         if (patientData) {
             setPatient(patientData)
-            setBirthDate(patientData.birth_date || '')
+            // Convert ISO (yyyy-mm-dd) to dd/mm/aaaa for display
+            if (patientData.birth_date) {
+                const [y, m, d] = patientData.birth_date.split('-')
+                setBirthDate(`${d}/${m}/${y}`)
+            } else {
+                setBirthDate('')
+            }
             setNotes(patientData.medical_notes || '')
             // Avatar: prefer patients.avatar_url (uploaded photo), fallback to users.avatar_url
             setAvatarUrl(patientData.avatar_url || userData?.avatar_url || null)
@@ -107,10 +113,39 @@ export default function PatientProfilePage() {
         }
     }
 
+    function handleBirthDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+        let value = e.target.value.replace(/\D/g, '')
+        if (value.length > 8) value = value.slice(0, 8)
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4)
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2)
+        }
+        setBirthDate(value)
+    }
+
+    function birthDateToISO(ddmmyyyy: string): string | null {
+        const parts = ddmmyyyy.split('/')
+        if (parts.length !== 3 || parts[2].length !== 4) return null
+        const [dd, mm, yyyy] = parts
+        const day = parseInt(dd, 10)
+        const month = parseInt(mm, 10)
+        const year = parseInt(yyyy, 10)
+        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) return null
+        return `${yyyy}-${mm}-${dd}`
+    }
+
     async function handleSave(e: React.FormEvent) {
         e.preventDefault()
         setSaving(true)
         setMessage(null)
+
+        const isoDate = birthDate ? birthDateToISO(birthDate) : null
+        if (birthDate && !isoDate) {
+            setMessage({ text: 'Data de nascimento inválida. Use o formato dd/mm/aaaa.', type: 'error' })
+            setSaving(false)
+            return
+        }
 
         try {
             if (name !== profile?.name) {
@@ -119,7 +154,7 @@ export default function PatientProfilePage() {
             await supabase.from('users').update({ name }).eq('id', user!.id)
             if (patient) {
                 await supabase.from('patients').update({
-                    birth_date: birthDate || null,
+                    birth_date: isoDate,
                     medical_notes: notes || null
                 }).eq('id', patient.id)
             }
@@ -236,8 +271,9 @@ export default function PatientProfilePage() {
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block uppercase tracking-wide">Data de Nascimento</label>
                             <input
-                                type="date" className="input-field"
-                                value={birthDate} onChange={e => setBirthDate(e.target.value)}
+                                type="text" inputMode="numeric" className="input-field"
+                                placeholder="dd/mm/aaaa" maxLength={10}
+                                value={birthDate} onChange={handleBirthDateChange}
                             />
                         </div>
                         <div>

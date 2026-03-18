@@ -15,11 +15,40 @@ export default function AddPatientPage() {
     const [birthDate, setBirthDate] = useState('')
     const [medicalNotes, setMedicalNotes] = useState('')
 
+    function handleBirthDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+        let value = e.target.value.replace(/\D/g, '')
+        if (value.length > 8) value = value.slice(0, 8)
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4)
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2)
+        }
+        setBirthDate(value)
+    }
+
+    function birthDateToISO(ddmmyyyy: string): string | null {
+        const parts = ddmmyyyy.split('/')
+        if (parts.length !== 3 || parts[2].length !== 4) return null
+        const [dd, mm, yyyy] = parts
+        const day = parseInt(dd, 10)
+        const month = parseInt(mm, 10)
+        const year = parseInt(yyyy, 10)
+        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) return null
+        return `${yyyy}-${mm}-${dd}`
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!user) return
         setLoading(true)
         setError(null)
+
+        const isoDate = birthDate ? birthDateToISO(birthDate) : null
+        if (birthDate && !isoDate) {
+            setError('Data de nascimento inválida. Use o formato dd/mm/aaaa.')
+            setLoading(false)
+            return
+        }
 
         try {
             // 1. Find or create license for this user
@@ -46,7 +75,7 @@ export default function AddPatientPage() {
                 license_id: license!.id,
                 user_id: user.id,
                 name,
-                birth_date: birthDate || null,
+                birth_date: isoDate,
                 medical_notes: medicalNotes || null,
             })
 
@@ -111,10 +140,13 @@ export default function AddPatientPage() {
                         Data de nascimento
                     </label>
                     <input
-                        type="date"
+                        type="text"
+                        inputMode="numeric"
                         className="input-field"
+                        placeholder="dd/mm/aaaa"
+                        maxLength={10}
                         value={birthDate}
-                        onChange={e => setBirthDate(e.target.value)}
+                        onChange={handleBirthDateChange}
                     />
                 </div>
 
