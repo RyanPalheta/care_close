@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
+import { registerServiceWorker, scheduleMedNotifications } from '@/lib/push-notifications'
 import { IconHome, IconCalendar, IconBarChart, IconSettings, IconClock, IconCheckCircle, IconXCircle, IconPill, IconPlus } from '@/components/Icons'
 
 interface PatientWithStats {
@@ -34,11 +35,12 @@ export default function CaregiverHomePage() {
     const loadPatients = useCallback(async () => {
         if (!user) return
 
-        // Get license owned by this user
+        // Get license owned by or assigned to this caregiver
         const { data: license } = await supabase
             .from('licenses')
             .select('id')
-            .eq('owner_id', user.id)
+            .or(`owner_id.eq.${user.id},assigned_to.eq.${user.id}`)
+            .eq('status', 'active')
             .maybeSingle()
 
         if (!license) { setLoading(false); return }
@@ -105,6 +107,29 @@ export default function CaregiverHomePage() {
 
         setPatients(enriched)
         setLoading(false)
+
+        // Schedule push notifications for all pending meds across all patients
+        const allPending: any[] = []
+        for (const patient of patientsData) {
+            const { data: pendingScheds } = await supabase
+                .from('medication_schedules')
+                .select('id, scheduled_time, status, medication:medications!medication_id (name, dosage, unit)')
+                .eq('patient_id', patient.id)
+                .eq('status', 'pending')
+                .gte('scheduled_time', startOfDay)
+                .lt('scheduled_time', endOfDay)
+
+            if (pendingScheds) {
+                allPending.push(...pendingScheds.map(s => ({
+                    ...s,
+                    medication: { ...(s as any).medication, name: `${(s as any).medication.name} (${patient.name})` },
+                })))
+            }
+        }
+        if (allPending.length > 0) {
+            registerServiceWorker()
+            scheduleMedNotifications(allPending, 5)
+        }
     }, [user])
 
     useEffect(() => {
@@ -166,9 +191,9 @@ export default function CaregiverHomePage() {
                 </div>
             </div>
 
-            <div className="px-4 -mt-5">
+            <div className="px-4 -mt-5 relative z-10">
                 {/* Add patient button */}
-                <Link href="/patient/add" className="btn-primary mb-6 block text-center" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                <Link href="/patient/add" className="btn-primary mb-6 block text-center shadow-lg transition-all hover:brightness-125 hover:shadow-xl" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
                     + Adicionar Paciente
                 </Link>
 
@@ -266,9 +291,12 @@ export default function CaregiverHomePage() {
                     <IconCalendar size={22} />
                     <span>Agenda</span>
                 </Link>
-                <Link href="/caregiver/reports" className="bottom-nav-item">
-                    <IconBarChart size={22} />
-                    <span>Relatórios</span>
+                <Link href="/caregiver/alerts" className="bottom-nav-item">
+                    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span>Avisos</span>
                 </Link>
                 <Link href="/caregiver/settings" className="bottom-nav-item">
                     <IconSettings size={22} />

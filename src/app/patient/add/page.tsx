@@ -51,28 +51,31 @@ export default function AddPatientPage() {
         }
 
         try {
-            // 1. Find or create license for this user
-            let { data: license, error: fetchErr } = await supabase
+            // 1. Find the license owned by or assigned to this user
+            const { data: license } = await supabase
                 .from('licenses')
-                .select('id')
-                .eq('owner_id', user.id)
+                .select('id, max_patients')
+                .or(`owner_id.eq.${user.id},assigned_to.eq.${user.id}`)
+                .eq('status', 'active')
                 .maybeSingle()
 
-            if (fetchErr) throw fetchErr
-
             if (!license) {
-                const { data: newLicense, error: licenseErr } = await supabase
-                    .from('licenses')
-                    .insert({ owner_id: user.id, plan_type: 'family', max_patients: 1, max_members: 5 })
-                    .select('id')
-                    .single()
-                if (licenseErr) throw licenseErr
-                license = newLicense
+                throw new Error('Voce nao possui uma licenca ativa. Adquira sua licenca para cadastrar pacientes.')
             }
 
-            // 2. Insert patient (with user_id so the home page can find it)
+            // 2. Check patient limit
+            const { count } = await supabase
+                .from('patients')
+                .select('id', { count: 'exact', head: true })
+                .eq('license_id', license.id)
+
+            if ((count || 0) >= license.max_patients) {
+                throw new Error(`Limite de ${license.max_patients} pacientes atingido. Atualize sua licenca para adicionar mais.`)
+            }
+
+            // 3. Insert patient
             const { error: patientErr } = await supabase.from('patients').insert({
-                license_id: license!.id,
+                license_id: license.id,
                 user_id: user.id,
                 name,
                 birth_date: isoDate,
@@ -88,7 +91,7 @@ export default function AddPatientPage() {
                 router.push('/patient/medications')
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err)
+            const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || JSON.stringify(err)
             setError(msg)
             console.error('Patient registration error:', err)
         } finally {

@@ -34,8 +34,6 @@ function AuthForm() {
                 // Happy path: User and Profile are loaded
                 if (profile.role === 'caregiver') {
                     router.replace('/caregiver/home')
-                } else if (profile.role === 'institution') {
-                    router.replace('/institution/dashboard')
                 } else {
                     router.replace('/patient/home')
                 }

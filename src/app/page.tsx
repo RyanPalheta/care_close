@@ -13,8 +13,6 @@ export default function HomePage() {
         if (!loading && user && profile) {
             if (profile.role === 'caregiver') {
                 router.replace('/caregiver/home')
-            } else if (profile.role === 'institution') {
-                router.replace('/institution/dashboard')
             } else {
                 router.replace('/patient/home')
             }
@@ -81,12 +79,6 @@ export default function HomePage() {
                     className="w-full py-4 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 text-center font-bold text-base hover:border-[#42b6f0] hover:text-[#42b6f0] transition-all active:scale-95"
                 >
                     Criar conta
-                </Link>
-                <Link
-                    href="/auth/institution-register"
-                    className="w-full py-3 rounded-2xl text-center text-sm font-bold text-[#7c3aed] hover:bg-[#7c3aed]/5 transition-all active:scale-95"
-                >
-                    Sou uma instituicao
                 </Link>
                 <p className="text-center text-xs text-gray-400 mt-1">
                     Ao criar conta, voce aceita nossos{' '}

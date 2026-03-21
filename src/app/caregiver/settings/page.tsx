@@ -160,45 +160,31 @@ export default function CaregiverSettingsPage() {
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-4">
                     <p className="text-[13px] font-extrabold text-gray-400 uppercase tracking-wide px-5 pt-5 pb-3">Sua Conta</p>
 
-                    <Link href="/institution/dashboard" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-                                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="font-bold text-gray-800 text-sm">Meu Plano (Licença)</p>
-                                <p className="text-xs text-gray-400">Ver contrato e faturamento</p>
-                            </div>
-                        </div>
-                        <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </Link>
-
-                    <Link href="/caregiver/license" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
+                    <Link href="/caregiver/license" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
                                 <IconUsers size={18} color="#42b6f0" />
                             </div>
                             <div>
-                                <p className="font-bold text-gray-800 text-sm">Minha Licença</p>
-                                <p className="text-xs text-gray-400">Visualizar status profissional</p>
+                                <p className="font-bold text-gray-800 text-sm">Minha Licenca</p>
+                                <p className="text-xs text-gray-400">Ver detalhes do seu plano</p>
                             </div>
                         </div>
                         <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </Link>
+
                 </div>
 
                 {/* App */}
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-4">
                     <p className="text-[13px] font-extrabold text-gray-400 uppercase tracking-wide px-5 pt-5 pb-3">Aplicativo</p>
-                    <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <Link href="/caregiver/notifications" className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center"><IconBell size={18} color="#f87171" /></div>
-                            <p className="font-bold text-gray-800 text-sm">Notificações</p>
+                            <p className="font-bold text-gray-800 text-sm">Notificacoes</p>
                         </div>
                         <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
+                    </Link>
                     <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center">
@@ -228,8 +214,12 @@ export default function CaregiverSettingsPage() {
                 <Link href="/caregiver/schedule" className="bottom-nav-item">
                     <IconCalendar size={22} /><span>Agenda</span>
                 </Link>
-                <Link href="/caregiver/reports" className="bottom-nav-item">
-                    <IconBarChart size={22} /><span>Relatórios</span>
+                <Link href="/caregiver/alerts" className="bottom-nav-item">
+                    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span>Avisos</span>
                 </Link>
                 <Link href="/caregiver/settings" className="bottom-nav-item active">
                     <IconSettings size={22} color="#7c3aed" /><span style={{ color: '#7c3aed' }}>Config</span>

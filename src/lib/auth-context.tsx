@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js'
 interface UserProfile {
     id: string
     name: string
-    role: 'patient' | 'family' | 'caregiver' | 'institution'
+    role: 'patient' | 'family' | 'caregiver'
     avatar_url?: string
 }
 
