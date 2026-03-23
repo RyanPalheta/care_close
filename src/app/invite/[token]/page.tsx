@@ -146,7 +146,7 @@ export default function InvitePage() {
 
             setStatus('success')
             setTimeout(() => {
-                router.replace('/patient/home')
+                router.replace('/guest/home')
             }, 2000)
 
         } catch (err: unknown) {

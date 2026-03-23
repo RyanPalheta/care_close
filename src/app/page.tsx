@@ -13,6 +13,8 @@ export default function HomePage() {
         if (!loading && user && profile) {
             if (profile.role === 'caregiver') {
                 router.replace('/caregiver/home')
+            } else if (profile.role === 'family') {
+                router.replace('/guest/home')
             } else {
                 router.replace('/patient/home')
             }
