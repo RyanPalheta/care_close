@@ -10,30 +10,48 @@ interface Medication {
 /**
  * Maps frequency + period to scheduled hours of the day.
  */
-function getScheduleHours(frequency: string, period: string | null): number[] {
+interface ScheduleTime {
+    hour: number
+    minute: number
+}
+
+function getScheduleTimes(frequency: string, period: string | null): ScheduleTime[] {
+    // Check if period contains specific times (JSON format)
+    if (period && period.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(period)
+            if (parsed.mode === 'time' && Array.isArray(parsed.times)) {
+                return parsed.times.map((t: string) => {
+                    const [h, m] = t.split(':').map(Number)
+                    return { hour: h || 0, minute: m || 0 }
+                })
+            }
+        } catch { /* fall through to meal-based */ }
+    }
+
     // Period-based times (approximate meal times in Brazil)
-    const periodTimes: Record<string, number> = {
-        antes_cafe: 7,
-        depois_cafe: 8,
-        antes_almoco: 11,
-        depois_almoco: 13,
-        antes_jantar: 18,
-        depois_jantar: 20,
+    const periodTimes: Record<string, ScheduleTime> = {
+        antes_cafe: { hour: 7, minute: 0 },
+        depois_cafe: { hour: 8, minute: 0 },
+        antes_almoco: { hour: 11, minute: 0 },
+        depois_almoco: { hour: 13, minute: 0 },
+        antes_jantar: { hour: 18, minute: 0 },
+        depois_jantar: { hour: 20, minute: 0 },
     }
 
     switch (frequency) {
         case 'daily':
-            return [period && periodTimes[period] ? periodTimes[period] : 8]
+            return [period && periodTimes[period] ? periodTimes[period] : { hour: 8, minute: 0 }]
         case 'twice_day':
-            return [8, 20]
+            return [{ hour: 8, minute: 0 }, { hour: 20, minute: 0 }]
         case 'three_day':
-            return [8, 14, 20]
+            return [{ hour: 8, minute: 0 }, { hour: 14, minute: 0 }, { hour: 20, minute: 0 }]
         case 'weekly':
-            return [8] // once on this day
+            return [{ hour: 8, minute: 0 }]
         case 'as_needed':
-            return [] // no auto-schedule
+            return []
         default:
-            return [8]
+            return [{ hour: 8, minute: 0 }]
     }
 }
 
@@ -42,8 +60,8 @@ function getScheduleHours(frequency: string, period: string | null): number[] {
  * Skips if schedules already exist for today.
  */
 export async function generateDailySchedules(medication: Medication): Promise<number> {
-    const hours = getScheduleHours(medication.frequency, medication.period)
-    if (hours.length === 0) return 0
+    const times = getScheduleTimes(medication.frequency, medication.period)
+    if (times.length === 0) return 0
 
     const today = new Date()
     const dateStr = today.toISOString().split('T')[0]
@@ -62,10 +80,10 @@ export async function generateDailySchedules(medication: Medication): Promise<nu
     if (existing && existing.length > 0) return 0 // already generated
 
     // Create schedule entries
-    const schedules = hours.map(hour => ({
+    const schedules = times.map(t => ({
         medication_id: medication.id,
         patient_id: medication.patient_id,
-        scheduled_time: `${dateStr}T${String(hour).padStart(2, '0')}:00:00`,
+        scheduled_time: `${dateStr}T${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}:00`,
         status: 'pending',
     }))
 

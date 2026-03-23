@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useCallback } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { IconHome, IconPill, IconRoutine, IconBarChart } from '@/components/Icons'
@@ -51,12 +51,14 @@ const HappyFace = () => (
 
 function RoutineContent() {
     const { user, profile } = useAuth()
+    const router = useRouter()
     const searchParams = useSearchParams()
     const [patientId, setPatientId] = useState<string | null>(null)
     const [routineId, setRoutineId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
+    const [showSummary, setShowSummary] = useState(false)
 
     // Form states
     const [waterGlasses, setWaterGlasses] = useState(0)
@@ -144,7 +146,7 @@ function RoutineContent() {
         }
         setSaving(false)
         setSaved(true)
-        setTimeout(() => setSaved(false), 2500)
+        setShowSummary(true)
     }
 
     const today = new Date()
@@ -398,6 +400,108 @@ function RoutineContent() {
                     )}
                 </button>
             </div>
+
+            {/* Summary Modal */}
+            {showSummary && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl transform animate-in zoom-in-95 duration-300">
+                        {/* Header */}
+                        <div className="text-center mb-5">
+                            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                                <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-extrabold text-gray-900">Rotina Salva!</h2>
+                            <p className="text-sm text-gray-400 mt-1">Resumo do seu dia</p>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-5">
+                            <div className="bg-sky-50 rounded-2xl p-3 text-center border border-sky-100">
+                                <p className="text-2xl font-black text-sky-500">{waterGlasses}</p>
+                                <p className="text-xs font-bold text-sky-400 mt-0.5">Copos de agua</p>
+                            </div>
+                            <div className="bg-emerald-50 rounded-2xl p-3 text-center border border-emerald-100">
+                                <p className="text-2xl font-black text-emerald-500">{walkDuration}<span className="text-sm">min</span></p>
+                                <p className="text-xs font-bold text-emerald-400 mt-0.5">Caminhada</p>
+                            </div>
+                            <div className="bg-orange-50 rounded-2xl p-3 text-center border border-orange-100">
+                                <p className="text-2xl font-black text-orange-500">
+                                    {exerciseIntensity ? `${exerciseDuration}min` : '--'}
+                                </p>
+                                <p className="text-xs font-bold text-orange-400 mt-0.5">
+                                    {exerciseIntensity ? `Exercicio ${exerciseIntensity}` : 'Sem exercicio'}
+                                </p>
+                            </div>
+                            <div className={`rounded-2xl p-3 text-center border ${
+                                foodQuality === 'verde' ? 'bg-green-50 border-green-100' :
+                                foodQuality === 'amarelo' ? 'bg-amber-50 border-amber-100' :
+                                foodQuality === 'vermelho' ? 'bg-red-50 border-red-100' :
+                                'bg-gray-50 border-gray-100'
+                            }`}>
+                                <div className="flex justify-center">
+                                    {foodQuality === 'verde' ? <HappyFace /> :
+                                     foodQuality === 'amarelo' ? <NeutralFace /> :
+                                     foodQuality === 'vermelho' ? <SadFace /> :
+                                     <span className="text-2xl font-black text-gray-300">--</span>}
+                                </div>
+                                <p className={`text-xs font-bold mt-0.5 ${
+                                    foodQuality === 'verde' ? 'text-green-500' :
+                                    foodQuality === 'amarelo' ? 'text-amber-500' :
+                                    foodQuality === 'vermelho' ? 'text-red-500' :
+                                    'text-gray-400'
+                                }`}>
+                                    {foodQuality === 'verde' ? 'Alimentacao otima' :
+                                     foodQuality === 'amarelo' ? 'Alimentacao media' :
+                                     foodQuality === 'vermelho' ? 'Alimentacao ruim' :
+                                     'Nao informado'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Completion badge */}
+                        <div className={`rounded-2xl p-3 text-center mb-5 ${
+                            checkedCount === totalCount ? 'bg-emerald-50 border border-emerald-200' :
+                            checkedCount >= 2 ? 'bg-sky-50 border border-sky-200' :
+                            'bg-amber-50 border border-amber-200'
+                        }`}>
+                            <p className={`font-extrabold text-sm ${
+                                checkedCount === totalCount ? 'text-emerald-600' :
+                                checkedCount >= 2 ? 'text-sky-600' :
+                                'text-amber-600'
+                            }`}>
+                                {checkedCount === totalCount ? 'Dia completo! Parabens!' :
+                                 checkedCount >= 2 ? `${checkedCount} de ${totalCount} atividades - Bom progresso!` :
+                                 `${checkedCount} de ${totalCount} atividades - Continue preenchendo!`}
+                            </p>
+                        </div>
+
+                        {/* Action buttons */}
+                        <button
+                            onClick={() => {
+                                const historyUrl = patientId && profile?.role === 'caregiver'
+                                    ? `/patient/routine/history?patientId=${patientId}`
+                                    : '/patient/routine/history'
+                                router.push(historyUrl)
+                            }}
+                            className="w-full py-3.5 rounded-2xl bg-[#42b6f0] text-white font-extrabold hover:bg-sky-500 transition-colors active:scale-[0.98] flex items-center justify-center gap-2 mb-2"
+                        >
+                            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                            Ver ultimos 7 dias
+                        </button>
+                        <button
+                            onClick={() => { setShowSummary(false); setSaved(false) }}
+                            className="w-full py-3 rounded-2xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-colors active:scale-[0.98]"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Nav */}
             <nav className="bottom-nav">

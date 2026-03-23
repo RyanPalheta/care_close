@@ -152,11 +152,30 @@ export default function MedicationsPage() {
         if (!authLoading && user) loadData()
     }, [authLoading, user, selectedDay])
 
+    // Parse hour from scheduled_time string (local, not UTC)
+    function getHourFromSchedule(scheduledTime: string): number {
+        const match = scheduledTime.match(/T(\d{2}):/)
+        return match ? parseInt(match[1]) : 0
+    }
+
+    // Determine period group from scheduled_time or period field
+    function getGroupFromSchedule(s: DaySchedule): string {
+        const p = s.medication?.period
+        // If period is a meal-based string, use the map
+        if (p && PERIOD_MAP[p]) return PERIOD_MAP[p].label
+
+        // For specific times or unknown, group by actual scheduled hour
+        const hour = getHourFromSchedule(s.scheduled_time)
+        if (hour >= 5 && hour < 12) return 'Manhã'
+        if (hour >= 12 && hour < 18) return 'Tarde'
+        if (hour >= 18 || hour < 5) return 'Noite'
+        return 'Outros'
+    }
+
     // Group schedules by period label
     const periodGroups: Record<string, DaySchedule[]> = {}
     for (const s of schedules) {
-        const p = s.medication?.period
-        const group = p ? (PERIOD_MAP[p]?.label ?? 'Outros') : 'Outros'
+        const group = getGroupFromSchedule(s)
         if (!periodGroups[group]) periodGroups[group] = []
         periodGroups[group].push(s)
     }
@@ -179,6 +198,11 @@ export default function MedicationsPage() {
                 : { label: 'Nenhum remédio hoje', color: '#94a3b8', bg: 'from-slate-300 to-slate-400' }
 
     function formatTime(iso: string) {
+        // Parse as local time (scheduled_time is stored without timezone as local)
+        const parts = iso.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+        if (parts) {
+            return `${parts[4]}:${parts[5]}`
+        }
         return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }
 
@@ -282,12 +306,9 @@ export default function MedicationsPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-extrabold text-gray-900 text-sm leading-tight">{groupName}</p>
-                                                    <p className="text-[11px] text-gray-400">{groupSchedules.length} remédio(s)</p>
+                                                    <p className="text-[11px] text-gray-400">{groupSchedules.length} remedio(s)</p>
                                                 </div>
                                             </div>
-                                            <span className="text-sm font-bold text-gray-400">
-                                                {formatTime(groupSchedules[0]?.scheduled_time)}
-                                            </span>
                                         </div>
 
                                         {/* 2-column gallery grid */}
@@ -318,8 +339,11 @@ export default function MedicationsPage() {
                                                         <p className="font-extrabold text-gray-900 text-sm leading-tight mb-0.5">
                                                             {s.medication.name}
                                                         </p>
-                                                        <p className="text-xs text-gray-400 mb-2">
+                                                        <p className="text-xs text-gray-400 mb-1">
                                                             {s.medication.dosage} {s.medication.unit}
+                                                        </p>
+                                                        <p className="text-xs font-bold text-[#7c3aed] mb-1.5">
+                                                            {formatTime(s.scheduled_time)}
                                                         </p>
 
                                                         {/* Status badge */}

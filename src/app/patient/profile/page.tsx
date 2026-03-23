@@ -347,6 +347,28 @@ export default function PatientProfilePage() {
                     </div>
                 </div>
 
+                {/* Minha Equipe */}
+                <Link
+                    href="/patient/team"
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-sky-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#42b6f0" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-extrabold text-gray-900">Minha Equipe</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Convide cuidadores e familiares</p>
+                    </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </Link>
+
                 {/* Logout */}
                 <button
                     onClick={handleLogout}

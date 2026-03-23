@@ -116,6 +116,11 @@ export default function PatientTeamPage() {
         setInvites(invites.map(i => i.id === id ? { ...i, status: 'revoked' } : i))
     }
 
+    async function deleteInvite(id: string) {
+        await supabase.from('invites').delete().eq('id', id)
+        setInvites(invites.filter(i => i.id !== id))
+    }
+
     async function copyLink(token: string) {
         const link = `${window.location.origin}/invite/${token}`
         await navigator.clipboard.writeText(link)
@@ -224,22 +229,32 @@ export default function PatientTeamPage() {
                                             </span>
                                         </div>
 
-                                        {invite.status === 'pending' && (
-                                            <div className="flex gap-2 mt-3">
+                                        <div className="flex gap-2 mt-3">
+                                            {invite.status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => copyLink(invite.invite_token)}
+                                                        className="flex-1 py-2 rounded-xl bg-sky-50 text-[#42b6f0] text-sm font-bold border border-sky-200 hover:bg-sky-100 transition-colors"
+                                                    >
+                                                        Copiar link
+                                                    </button>
+                                                    <button
+                                                        onClick={() => revokeInvite(invite.id)}
+                                                        className="px-4 py-2 rounded-xl bg-red-50 text-red-500 text-sm font-bold border border-red-200 hover:bg-red-100 transition-colors"
+                                                    >
+                                                        Revogar
+                                                    </button>
+                                                </>
+                                            )}
+                                            {(invite.status === 'accepted' || invite.status === 'revoked') && (
                                                 <button
-                                                    onClick={() => copyLink(invite.invite_token)}
-                                                    className="flex-1 py-2 rounded-xl bg-sky-50 text-[#42b6f0] text-sm font-bold border border-sky-200 hover:bg-sky-100 transition-colors"
+                                                    onClick={() => deleteInvite(invite.id)}
+                                                    className="flex-1 py-2 rounded-xl bg-red-50 text-red-500 text-sm font-bold border border-red-200 hover:bg-red-100 transition-colors"
                                                 >
-                                                    Copiar link
+                                                    Remover
                                                 </button>
-                                                <button
-                                                    onClick={() => revokeInvite(invite.id)}
-                                                    className="px-4 py-2 rounded-xl bg-red-50 text-red-500 text-sm font-bold border border-red-200 hover:bg-red-100 transition-colors"
-                                                >
-                                                    Revogar
-                                                </button>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
