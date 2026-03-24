@@ -63,27 +63,21 @@ export async function POST(request: NextRequest) {
         })
 
         if (createErr) {
-            // User probably already exists - look them up
-            const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1, page: 1 })
-            // Search by email using the users table instead
-            const { data: existingProfile } = await supabase
-                .from('users')
-                .select('id')
-                .eq('email', buyerEmail)
-                .maybeSingle()
+            // User already exists - find by email in auth
+            const { data: foundUser, error: lookupErr } = await supabase.auth.admin.getUserByEmail(buyerEmail)
 
-            if (existingProfile) {
-                userId = existingProfile.id
-            } else {
-                // Try listing from auth
-                const { data: allUsers } = await supabase.auth.admin.listUsers()
-                const found = allUsers?.users?.find(u => u.email === buyerEmail)
-                if (found) {
-                    userId = found.id
-                } else {
-                    return NextResponse.json({ error: 'Failed to create user: ' + createErr.message }, { status: 500 })
-                }
+            if (lookupErr || !foundUser?.user) {
+                return NextResponse.json({ error: 'User exists but lookup failed: ' + (lookupErr?.message || 'not found') }, { status: 500 })
             }
+
+            userId = foundUser.user.id
+
+            // Ensure profile exists
+            await supabase.from('users').upsert({
+                id: userId,
+                name: buyerName || buyerEmail.split('@')[0],
+                role: licenseConfig.type === 'cuidador' ? 'caregiver' : 'patient',
+            }, { onConflict: 'id' })
         } else {
             userId = newUser.user.id
             isNewUser = true
