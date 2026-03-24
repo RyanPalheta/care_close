@@ -63,14 +63,24 @@ export async function POST(request: NextRequest) {
         })
 
         if (createErr) {
-            // User already exists - find by email in auth
-            const { data: foundUser, error: lookupErr } = await supabase.auth.admin.getUserByEmail(buyerEmail)
+            // User already exists - find by email via users table or auth list
+            const { data: profileMatch } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', buyerEmail)
+                .maybeSingle()
 
-            if (lookupErr || !foundUser?.user) {
-                return NextResponse.json({ error: 'User exists but lookup failed: ' + (lookupErr?.message || 'not found') }, { status: 500 })
+            if (profileMatch) {
+                userId = profileMatch.id
+            } else {
+                // Fallback: search in auth users
+                const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000, page: 1 })
+                const found = listData?.users?.find(u => u.email === buyerEmail)
+                if (!found) {
+                    return NextResponse.json({ error: 'User exists in auth but could not be found' }, { status: 500 })
+                }
+                userId = found.id
             }
-
-            userId = foundUser.user.id
 
             // Ensure profile exists
             await supabase.from('users').upsert({
