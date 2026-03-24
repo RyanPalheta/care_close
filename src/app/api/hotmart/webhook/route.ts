@@ -63,23 +63,23 @@ export async function POST(request: NextRequest) {
         })
 
         if (createErr) {
-            // User already exists - find by email via users table or auth list
-            const { data: profileMatch } = await supabase
-                .from('users')
-                .select('id')
-                .eq('email', buyerEmail)
-                .maybeSingle()
+            // If "already registered", try to find in auth.identities or deleted users
+            // First try: search all auth users
+            const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000, page: 1 })
+            const found = listData?.users?.find(u => u.email === buyerEmail)
 
-            if (profileMatch) {
-                userId = profileMatch.id
-            } else {
-                // Fallback: search in auth users
-                const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000, page: 1 })
-                const found = listData?.users?.find(u => u.email === buyerEmail)
-                if (!found) {
-                    return NextResponse.json({ error: 'User exists in auth but could not be found' }, { status: 500 })
-                }
+            if (found) {
                 userId = found.id
+            } else {
+                // User might be in a broken state - try deleting and recreating
+                // Or the email might be in identities but not users
+                // Return detailed error for debugging
+                return NextResponse.json({
+                    error: 'Cannot create or find user',
+                    createError: createErr.message,
+                    email: buyerEmail,
+                    authUsersCount: listData?.users?.length || 0,
+                }, { status: 500 })
             }
 
             // Ensure profile exists
