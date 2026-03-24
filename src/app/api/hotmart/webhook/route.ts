@@ -50,27 +50,43 @@ export async function POST(request: NextRequest) {
         // Determine license type from product
         const licenseConfig = PRODUCT_LICENSE_MAP[productId] || PRODUCT_LICENSE_MAP['paciente']
 
-        // Check if user already exists in auth
-        const { data: existingUsers } = await supabase.auth.admin.listUsers()
+        // Try to create user - if already exists, find them
         let userId: string | null = null
-        const existingUser = existingUsers?.users?.find(u => u.email === buyerEmail)
+        let isNewUser = false
 
-        if (existingUser) {
-            userId = existingUser.id
-        } else {
-            // Create user with a temporary password (they'll need to reset)
-            const tempPassword = crypto.randomUUID()
-            const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
-                email: buyerEmail,
-                password: tempPassword,
-                email_confirm: true,
-                user_metadata: { name: buyerName },
-            })
-            if (createErr) {
-                console.error('Error creating user:', createErr)
-                return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+        const tempPassword = crypto.randomUUID()
+        const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+            email: buyerEmail,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { name: buyerName },
+        })
+
+        if (createErr) {
+            // User probably already exists - look them up
+            const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1, page: 1 })
+            // Search by email using the users table instead
+            const { data: existingProfile } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', buyerEmail)
+                .maybeSingle()
+
+            if (existingProfile) {
+                userId = existingProfile.id
+            } else {
+                // Try listing from auth
+                const { data: allUsers } = await supabase.auth.admin.listUsers()
+                const found = allUsers?.users?.find(u => u.email === buyerEmail)
+                if (found) {
+                    userId = found.id
+                } else {
+                    return NextResponse.json({ error: 'Failed to create user: ' + createErr.message }, { status: 500 })
+                }
             }
+        } else {
             userId = newUser.user.id
+            isNewUser = true
 
             // Create profile in users table
             await supabase.from('users').upsert({
@@ -127,8 +143,8 @@ export async function POST(request: NextRequest) {
             }, { onConflict: 'user_id' })
         }
 
-        // Send password reset email so user can set their password
-        if (!existingUser) {
+        // Send password reset email so new user can set their password
+        if (isNewUser) {
             await supabase.auth.admin.generateLink({
                 type: 'magiclink',
                 email: buyerEmail,
