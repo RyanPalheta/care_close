@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
         const supabase = getSupabaseAdmin()
         const body = await request.json()
 
-        // Validate hottok if configured
-        if (HOTMART_HOTTOK && body.hottok !== HOTMART_HOTTOK) {
+        // Validate hottok: reject only if both are present and don't match
+        if (HOTMART_HOTTOK && body.hottok && body.hottok !== HOTMART_HOTTOK) {
             return NextResponse.json({ error: 'Invalid hottok' }, { status: 401 })
         }
 
