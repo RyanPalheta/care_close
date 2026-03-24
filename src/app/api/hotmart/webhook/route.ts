@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing buyer email' }, { status: 400 })
         }
 
-        // Determine license type from product
-        const licenseConfig = PRODUCT_LICENSE_MAP[productId] || PRODUCT_LICENSE_MAP['paciente']
+        // Determine license type from product (default to paciente if unknown product like test)
+        const DEFAULT_LICENSE = { type: 'paciente' as const, max_patients: 1, max_members: 5 }
+        const licenseConfig = PRODUCT_LICENSE_MAP[productId] || DEFAULT_LICENSE
 
         // Try to create user - if already exists, find them
         let userId: string | null = null
