@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
         if (licenseErr) {
             console.error('Error creating license:', licenseErr)
-            return NextResponse.json({ error: 'Failed to create license' }, { status: 500 })
+            return NextResponse.json({ error: 'Failed to create license', details: licenseErr.message, code: licenseErr.code }, { status: 500 })
         }
 
         // If patient license, create patient record
