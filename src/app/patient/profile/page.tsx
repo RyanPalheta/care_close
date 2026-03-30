@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { IconHome, IconPill, IconRoutine, IconBarChart, IconLogout, IconCamera, IconBell } from '@/components/Icons'
-import { registerServiceWorker, subscribeToPush } from '@/lib/push-notifications'
+import { IconHome, IconPill, IconRoutine, IconBarChart, IconLogout, IconCamera } from '@/components/Icons'
+import { registerServiceWorker } from '@/lib/push-notifications'
 
 interface PatientProfile {
     id: string
@@ -29,9 +29,6 @@ export default function PatientProfilePage() {
     const [notes, setNotes] = useState('')
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
-    const [notifEnabled, setNotifEnabled] = useState(false)
-    const [notifLeadTime, setNotifLeadTime] = useState(5)
-    const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default')
 
     useEffect(() => {
         if (!user) return
@@ -166,16 +163,6 @@ export default function PatientProfilePage() {
         }
     }
 
-    async function handleEnableNotifications() {
-        const sub = await subscribeToPush()
-        if (sub || Notification.permission === 'granted') {
-            setNotifEnabled(true)
-            setNotifPermission('granted')
-            setMessage({ text: 'Notificações ativadas!', type: 'success' })
-        } else {
-            setMessage({ text: 'Permissão negada. Verifique as configurações do navegador.', type: 'error' })
-        }
-    }
 
     async function handleLogout() {
         await supabase.auth.signOut()
@@ -288,63 +275,6 @@ export default function PatientProfilePage() {
                             {saving ? 'Salvando...' : 'Salvar Alterações'}
                         </button>
                     </form>
-                </div>
-
-                {/* Notification Settings */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-xl bg-[#fef3f3] flex items-center justify-center">
-                            <IconBell size={16} color="#f87171" />
-                        </div>
-                        <h2 className="font-extrabold text-gray-900">Notificações</h2>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                        {/* Enable push */}
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-semibold text-gray-800 text-sm">Lembretes de Remédio</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {notifPermission === 'granted' ? 'Ativado' : 'Requer permissão do navegador'}
-                                </p>
-                            </div>
-                            {notifPermission !== 'granted' ? (
-                                <button
-                                    onClick={handleEnableNotifications}
-                                    className="bg-[#42b6f0] text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors"
-                                >
-                                    Ativar
-                                </button>
-                            ) : (
-                                <div className="w-5 h-5 rounded-full bg-[#4ade80] flex items-center justify-center">
-                                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Lead time slider */}
-                        {notifPermission === 'granted' && (
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-semibold text-gray-600">Avisar com antecedência</p>
-                                    <span className="text-xs font-extrabold text-[#42b6f0]">{notifLeadTime} min antes</span>
-                                </div>
-                                <input
-                                    type="range" min={1} max={30} step={1}
-                                    value={notifLeadTime}
-                                    onChange={e => setNotifLeadTime(Number(e.target.value))}
-                                    className="w-full accent-[#42b6f0]"
-                                />
-                                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                                    <span>1 min</span>
-                                    <span>15 min</span>
-                                    <span>30 min</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 {/* Notificações */}
