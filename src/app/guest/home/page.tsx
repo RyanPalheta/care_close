@@ -9,7 +9,7 @@ interface PatientInfo {
     id: string
     name: string
     avatar_url: string | null
-    date_of_birth: string | null
+    birth_date: string | null
 }
 
 interface MedSchedule {
@@ -87,10 +87,14 @@ export default function GuestHomePage() {
 
         // Get patients from those licenses
         const licenseIds = [...new Set(invites.map(i => i.license_id))]
-        const { data: patientData } = await supabase
+        const { data: patientData, error: patientErr } = await supabase
             .from('patients')
-            .select('id, name, avatar_url, date_of_birth')
+            .select('id, name, avatar_url, birth_date')
             .in('license_id', licenseIds)
+
+        if (patientErr) {
+            console.error('Patient query error:', patientErr)
+        }
 
         if (patientData && patientData.length > 0) {
             setPatients(patientData)
@@ -236,8 +240,8 @@ export default function GuestHomePage() {
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-extrabold text-gray-900">{selectedPatient.name}</h2>
-                                            {selectedPatient.date_of_birth && (
-                                                <p className="text-sm text-gray-400">{getAge(selectedPatient.date_of_birth)} anos</p>
+                                            {selectedPatient.birth_date && (
+                                                <p className="text-sm text-gray-400">{getAge(selectedPatient.birth_date)} anos</p>
                                             )}
                                         </div>
                                     </div>
