@@ -33,9 +33,6 @@ export default function PatientProfilePage() {
     useEffect(() => {
         if (!user) return
         loadProfile()
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-            setNotifPermission(Notification.permission)
-        }
     }, [user])
 
     async function loadProfile() {
