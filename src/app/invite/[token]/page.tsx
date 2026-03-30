@@ -116,12 +116,18 @@ export default function InvitePage() {
             }
 
             // Upsert profile
-            await supabase.from('users').upsert({
+            const { error: profileError } = await supabase.from('users').upsert({
                 id: currentUser.id,
                 name: formName.trim(),
                 role: formRole,
                 email: formEmail.trim(),
             }, { onConflict: 'id' })
+
+            if (profileError) {
+                setError('Erro ao criar perfil: ' + profileError.message)
+                setSaving(false)
+                return
+            }
 
             // Accept invite
             setStatus('accepting')

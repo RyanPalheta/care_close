@@ -72,12 +72,21 @@ export default function PatientHomePage() {
         setSchedules((data as unknown as MedSchedule[]) ?? [])
         setLoading(false)
 
-        // Schedule local push notifications for pending meds
-        const pending = (data as unknown as MedSchedule[])?.filter(s => s.status === 'pending') ?? []
-        if (pending.length > 0) {
-            registerServiceWorker()
-            scheduleMedNotifications(pending as any, 5)
-        }
+        // Schedule local push notifications for pending meds (respecting user preferences)
+        try {
+            const prefsStr = localStorage.getItem('cc_notif_prefs')
+            const notifPrefs = prefsStr ? JSON.parse(prefsStr) : null
+            const medReminders = notifPrefs?.medReminders ?? true
+            const leadMin = notifPrefs?.medLeadMinutes ?? parseInt(localStorage.getItem('cc_notif_lead_minutes') || '5')
+
+            if (medReminders) {
+                const pending = (data as unknown as MedSchedule[])?.filter(s => s.status === 'pending') ?? []
+                if (pending.length > 0) {
+                    registerServiceWorker()
+                    scheduleMedNotifications(pending as any, leadMin)
+                }
+            }
+        } catch { /* ignore prefs errors */ }
     }, [user])
 
     useEffect(() => {

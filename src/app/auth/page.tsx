@@ -187,12 +187,10 @@ function AuthForm() {
                     Voltar
                 </button>
                 <h1 className="text-3xl font-black text-gray-900 mb-1">
-                    {isLogin ? 'Bem-vindo\nde volta!' : 'Criar\nconta'}
+                    Bem-vindo{'\n'}de volta!
                 </h1>
                 <p className="text-sm text-gray-400 mt-2">
-                    {isLogin
-                        ? 'Acesse sua plataforma de cuidados'
-                        : 'Cadastre-se para começar a usar o Care Close'}
+                    Acesse sua plataforma de cuidados
                 </p>
             </div>
 
@@ -350,28 +348,12 @@ function AuthForm() {
                     >
                         {loading
                             ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto block" />
-                            : isLogin ? 'Entrar' : 'Criar conta'
+                            : 'Entrar'
                         }
                     </button>
                 </form>
 
-                {/* Toggle login / signup */}
-                <div className="flex items-center justify-center gap-1 mt-6 pb-8">
-                    <p className="text-sm text-gray-400">
-                        {isLogin ? 'Não tem conta?' : 'Já tem conta?'}
-                    </p>
-                    <button
-                        type="button"
-                        className="text-sm font-bold text-[#42b6f0]"
-                        onClick={() => {
-                            setIsLogin(!isLogin)
-                            setError(null)
-                            setMessage(null)
-                        }}
-                    >
-                        {isLogin ? 'Criar conta' : 'Entrar'}
-                    </button>
-                </div>
+                <div className="pb-8" />
                 </>
                 )}
             </div>
