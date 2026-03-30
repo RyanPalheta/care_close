@@ -81,11 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     .from('users')
                     .select('id, name, role, avatar_url')
                     .eq('id', userId)
-                    .single()
+                    .maybeSingle()
 
                 if (error) {
                     console.error(`fetchProfile attempt ${attempt}/${retries} error:`, error.message || "Unknown error")
-                    console.error('Error details:', JSON.stringify(error))
                     if (attempt < retries) {
                         await new Promise(r => setTimeout(r, 1000 * attempt))
                         continue

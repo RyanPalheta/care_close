@@ -115,12 +115,11 @@ export default function InvitePage() {
                 }
             }
 
-            // Upsert profile
+            // Upsert profile (users table has no email column - email is in auth.users)
             const { error: profileError } = await supabase.from('users').upsert({
                 id: currentUser.id,
                 name: formName.trim(),
                 role: formRole,
-                email: formEmail.trim(),
             }, { onConflict: 'id' })
 
             if (profileError) {
