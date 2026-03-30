@@ -347,6 +347,26 @@ export default function PatientProfilePage() {
                     </div>
                 </div>
 
+                {/* Notificações */}
+                <Link
+                    href="/patient/notifications"
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-violet-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-extrabold text-gray-900">Notificações</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Lembretes, estoque e rotina</p>
+                    </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </Link>
+
                 {/* Minha Equipe */}
                 <Link
                     href="/patient/team"
