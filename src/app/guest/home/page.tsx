@@ -54,12 +54,23 @@ export default function GuestHomePage() {
     async function loadPatients() {
         if (!user) return
 
+        // Ensure session is active before querying with RLS
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+            router.replace('/auth')
+            return
+        }
+
         // Find invites accepted by this user
-        const { data: invites } = await supabase
+        const { data: invites, error: inviteErr } = await supabase
             .from('invites')
             .select('license_id, invited_by')
             .eq('accepted_by', user.id)
             .eq('status', 'accepted')
+
+        if (inviteErr) {
+            console.error('Invite query error:', inviteErr)
+        }
 
         if (!invites || invites.length === 0) {
             setLoading(false)
