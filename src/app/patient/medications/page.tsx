@@ -11,6 +11,7 @@ import {
 } from '@/components/Icons'
 
 type Day = 'hoje' | 'amanha'
+type View = 'agenda' | 'gerenciar'
 
 interface Medication {
     id: string
@@ -29,6 +30,14 @@ interface DaySchedule {
     status: 'pending' | 'taken' | 'missed' | 'skipped'
     medication: Medication
 }
+
+const FREQUENCIES = [
+    { value: 'daily', label: '1x ao dia' },
+    { value: 'twice_day', label: '2x ao dia' },
+    { value: 'three_day', label: '3x ao dia' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'as_needed', label: 'SOS' },
+]
 
 const PERIOD_MAP: Record<string, { label: string; sub: string }> = {
     antes_cafe: { label: 'Manhã', sub: 'Antes do café' },
@@ -95,10 +104,12 @@ export default function MedicationsPage() {
     const { user, loading: authLoading } = useAuth()
 
     const [selectedDay, setSelectedDay] = useState<Day>('hoje')
+    const [view, setView] = useState<View>('agenda')
     const [schedules, setSchedules] = useState<DaySchedule[]>([])
     const [medications, setMedications] = useState<Medication[]>([])
     const [loading, setLoading] = useState(true)
     const [patientId, setPatientId] = useState<string | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
 
     const { startOfDay, endOfDay, label: targetDateLabel } = getLocalDayBounds(selectedDay)
 
@@ -197,6 +208,15 @@ export default function MedicationsPage() {
                 ? { label: `${pending} pendente(s) hoje`, color: '#fbbf24', bg: 'from-amber-400 to-orange-400' }
                 : { label: 'Nenhum remédio hoje', color: '#94a3b8', bg: 'from-slate-300 to-slate-400' }
 
+    async function handleDelete(medId: string, medName: string) {
+        if (!confirm(`Excluir "${medName}"? Isso também remove os agendamentos futuros.`)) return
+        setDeletingId(medId)
+        await supabase.from('medication_schedules').delete().eq('medication_id', medId)
+        await supabase.from('medications').delete().eq('id', medId)
+        setMedications(prev => prev.filter(m => m.id !== medId))
+        setDeletingId(null)
+    }
+
     function formatTime(iso: string) {
         // Parse as local time (scheduled_time is stored without timezone as local)
         const parts = iso.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
@@ -239,20 +259,21 @@ export default function MedicationsPage() {
 
             <div className="px-4 pt-4">
 
-                {/* ── Day Selector ──────────────────────── */}
+                {/* ── View Toggle ──────────────────────── */}
                 <div className="bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 flex gap-1 mb-4">
-                    {(['hoje', 'amanha'] as Day[]).map(d => (
-                        <button
-                            key={d}
-                            onClick={() => setSelectedDay(d)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all
-                                ${selectedDay === d
-                                    ? 'bg-[#7c3aed] text-white shadow-md shadow-violet-100'
-                                    : 'text-gray-500 hover:bg-gray-50'}`}
-                        >
-                            {d === 'hoje' ? 'Hoje' : 'Amanhã'}
-                        </button>
-                    ))}
+                    <button
+                        onClick={() => setView('agenda')}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${view === 'agenda' ? 'bg-[#7c3aed] text-white shadow-md shadow-violet-100' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                        Agenda
+                    </button>
+                    <button
+                        onClick={() => setView('gerenciar')}
+                        data-onboarding="manage-tab"
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${view === 'gerenciar' ? 'bg-[#7c3aed] text-white shadow-md shadow-violet-100' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                        Gerenciar
+                    </button>
                     <button
                         onClick={() => router.push('/patient/calendar')}
                         className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:bg-gray-50 flex items-center justify-center gap-1.5"
@@ -262,8 +283,27 @@ export default function MedicationsPage() {
                     </button>
                 </div>
 
-                {/* Date label */}
-                <p className="text-xs text-gray-400 font-medium capitalize mb-4 px-1">{targetDateLabel}</p>
+                {/* ── Day Selector (agenda only) ──────────────────────── */}
+                {view === 'agenda' && (
+                    <>
+                        <div className="bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 flex gap-1 mb-4">
+                            {(['hoje', 'amanha'] as Day[]).map(d => (
+                                <button
+                                    key={d}
+                                    onClick={() => setSelectedDay(d)}
+                                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all
+                                        ${selectedDay === d
+                                            ? 'bg-gray-800 text-white shadow-sm'
+                                            : 'text-gray-500 hover:bg-gray-50'}`}
+                                >
+                                    {d === 'hoje' ? 'Hoje' : 'Amanhã'}
+                                </button>
+                            ))}
+                        </div>
+                        {/* Date label */}
+                        <p className="text-xs text-gray-400 font-medium capitalize mb-4 px-1">{targetDateLabel}</p>
+                    </>
+                )}
 
                 {/* Low stock alert */}
                 {lowStock.length > 0 && (
@@ -275,8 +315,71 @@ export default function MedicationsPage() {
                     </div>
                 )}
 
+                {/* ── Gerenciar View ────────────────── */}
+                {view === 'gerenciar' && (
+                    <div className="flex flex-col gap-3">
+                        {loading ? (
+                            <div className="flex justify-center py-16">
+                                <span className="w-8 h-8 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+                            </div>
+                        ) : medications.length === 0 ? (
+                            <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
+                                <div className="w-14 h-14 rounded-2xl bg-[#f0f8ff] flex items-center justify-center mx-auto mb-3">
+                                    <IconPill size={28} color="#42b6f0" />
+                                </div>
+                                <p className="font-bold text-gray-700">Nenhum medicamento cadastrado</p>
+                                <p className="text-sm text-gray-400 mt-1">Adicione medicamentos no botão abaixo</p>
+                            </div>
+                        ) : (
+                            medications.map(med => (
+                                <div key={med.id} className="bg-white rounded-2xl px-4 py-3.5 shadow-sm border border-gray-100 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                                        <IconPill size={20} color="#7c3aed" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-extrabold text-gray-900 text-sm leading-tight truncate">{med.name}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">{med.dosage} {med.unit} · {FREQUENCIES.find(f => f.value === med.frequency)?.label ?? med.frequency}</p>
+                                        {med.stock_quantity <= 5 && (
+                                            <p className="text-[11px] text-orange-500 font-bold mt-0.5">
+                                                {med.stock_quantity === 0 ? 'Estoque esgotado' : `${med.stock_quantity} restantes`}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <Link
+                                            href={`/patient/medications/${med.id}/edit`}
+                                            className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center hover:bg-violet-100 transition-colors"
+                                        >
+                                            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                            </svg>
+                                        </Link>
+                                        <button
+                                            onClick={() => handleDelete(med.id, med.name)}
+                                            disabled={deletingId === med.id}
+                                            className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition-colors disabled:opacity-50"
+                                        >
+                                            {deletingId === med.id ? (
+                                                <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
+                                            ) : (
+                                                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="3 6 5 6 21 6" />
+                                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                    <path d="M10 11v6M14 11v6" />
+                                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+
                 {/* ── Medication Periods ────────────────── */}
-                {loading ? (
+                {view === 'agenda' && (loading ? (
                     <div className="flex justify-center py-16">
                         <span className="w-8 h-8 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin" />
                     </div>
@@ -378,14 +481,16 @@ export default function MedicationsPage() {
                                                         )}
 
                                                         {/* Edit shortcut */}
-                                                        <Link
-                                                            href={`/patient/medications/${s.medication.id}/edit`}
-                                                            className="absolute top-3 right-3 text-gray-200 hover:text-gray-400 transition-colors"
-                                                        >
-                                                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                                                <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-                                                            </svg>
-                                                        </Link>
+                                                        {s.medication?.id && (
+                                                            <Link
+                                                                href={`/patient/medications/${s.medication.id}/edit`}
+                                                                className="absolute top-3 right-3 text-gray-200 hover:text-gray-400 transition-colors"
+                                                            >
+                                                                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                                                    <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+                                                                </svg>
+                                                            </Link>
+                                                        )}
                                                     </div>
                                                 )
                                             })}
@@ -394,13 +499,13 @@ export default function MedicationsPage() {
                                 )
                             })}
                     </div>
-                )}
+                ))}
 
                 <div className="h-4" />
             </div>
 
             {/* Add Medication FAB */}
-            <div className="fixed bottom-24 right-4 z-40">
+            <div data-onboarding="add-med-fab" className="fixed bottom-24 right-4 z-40">
                 <Link
                     href={`/patient/medications/add${patientId ? `?patientId=${patientId}` : ''}`}
                     className="w-14 h-14 bg-[#7c3aed] rounded-full shadow-xl shadow-violet-200 flex items-center justify-center hover:bg-[#6d28d9] transition-all active:scale-95"

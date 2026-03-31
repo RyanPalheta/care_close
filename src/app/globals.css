@@ -217,6 +217,21 @@ body {
 .badge-brand   { background: var(--color-brand-light); color: var(--color-brand-dark); }
 
 /* Micro-animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes tourPulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 0 rgba(255,255,255,0.4); }
+  50%       { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 6px rgba(255,255,255,0.0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }

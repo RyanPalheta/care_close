@@ -94,6 +94,7 @@ export default function PatientHomePage() {
         else if (!authLoading) setLoading(false)
     }, [authLoading, user, loadSchedules])
 
+
     const takenCount = schedules.filter(s => s.status === 'taken').length
     const totalCount = schedules.length
     const progress = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0
@@ -172,7 +173,7 @@ export default function PatientHomePage() {
 
                 {/* ── Next Medication Card ───────────────────── */}
                 {nextPending ? (
-                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                    <div data-onboarding="next-med" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                         <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-3">Próximo Medicamento</p>
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
@@ -214,7 +215,7 @@ export default function PatientHomePage() {
                 {/* ── Quick Actions Row ─────────────────────── */}
                 <div className="grid grid-cols-2 gap-3">
                     {/* Daily Goal */}
-                    <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div data-onboarding="daily-goal" className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
                         <div className="relative w-[76px] h-[76px] flex-shrink-0">
                             <svg width={76} height={76} viewBox="0 0 76 76">
                                 <circle cx={38} cy={38} r={circleRadius} fill="none" stroke="#f0f8ff" strokeWidth={7} />
@@ -443,6 +444,7 @@ export default function PatientHomePage() {
                     </div>
                 </div>
             )}
+
         </div>
     )
 }

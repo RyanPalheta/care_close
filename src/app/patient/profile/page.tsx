@@ -296,6 +296,7 @@ export default function PatientProfilePage() {
 
                 {/* Minha Equipe */}
                 <Link
+                    data-onboarding="team-link"
                     href="/patient/team"
                     className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-sky-50 transition-colors"
                 >
@@ -316,6 +317,27 @@ export default function PatientProfilePage() {
                     </svg>
                 </Link>
 
+                {/* Instruções */}
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('cc_onboarding_done')
+                        window.dispatchEvent(new CustomEvent('cc-start-tour'))
+                        router.push('/patient/home')
+                    }}
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-amber-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 text-xl">
+                        📖
+                    </div>
+                    <div className="flex-1 text-left">
+                        <p className="font-extrabold text-gray-900">Instruções</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Como usar o Care Close</p>
+                    </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
+
                 {/* Logout */}
                 <button
                     onClick={handleLogout}
@@ -325,6 +347,7 @@ export default function PatientProfilePage() {
                     Sair da Conta
                 </button>
             </div>
+
 
             {/* Bottom Nav */}
             <nav className="bottom-nav">

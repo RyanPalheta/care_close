@@ -210,7 +210,7 @@ function RoutineContent() {
                 )}
 
                 {/* Hidratação (Copos de Água) */}
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex flex-col items-center">
+                <div data-onboarding="routine-water" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex flex-col items-center">
                     <div className="self-start flex gap-2 items-center mb-4">
                         <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center">
                             <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#42b6f0" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>

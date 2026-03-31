@@ -26,10 +26,7 @@ interface MedSchedule {
 interface RoutineDay {
     date: string
     water_glasses: number
-    walked: boolean
-    exercise_minutes: number
-    food_quality: number
-    observation: string | null
+    food_notes: string | null
 }
 
 export default function GuestHomePage() {
@@ -126,7 +123,7 @@ export default function GuestHomePage() {
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
         const { data: routineData } = await supabase
             .from('daily_routines')
-            .select('date, water_glasses, walked, exercise_minutes, food_quality, observation')
+            .select('date, water_glasses, food_notes')
             .eq('patient_id', patientId)
             .eq('date', todayStr)
             .maybeSingle()
@@ -324,8 +321,8 @@ export default function GuestHomePage() {
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-bold text-gray-800 truncate">{s.medication.name}</p>
-                                                        <p className="text-xs text-gray-400">{s.medication.dosage} {s.medication.unit}</p>
+                                                        <p className="text-sm font-bold text-gray-800 truncate">{s.medication?.name ?? 'Medicamento'}</p>
+                                                        <p className="text-xs text-gray-400">{s.medication?.dosage ?? ''} {s.medication?.unit ?? ''}</p>
                                                     </div>
                                                     <span className="text-sm font-bold text-gray-500">{formatTime(s.scheduled_time)}</span>
                                                 </div>
@@ -339,36 +336,42 @@ export default function GuestHomePage() {
                                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Rotina de Hoje</h3>
                                     {!routine ? (
                                         <p className="text-center text-gray-400 text-sm py-4">Rotina ainda nao registrada hoje.</p>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-blue-50 rounded-2xl p-4 text-center">
-                                                <p className="text-2xl mb-1">💧</p>
-                                                <p className="text-lg font-bold text-blue-700">{routine.water_glasses}</p>
-                                                <p className="text-[10px] text-blue-500 font-medium">copos de agua</p>
+                                    ) : (() => {
+                                        let fn: { walkDuration?: number; exercise?: { intensity?: string; duration?: number }; food?: string } = {}
+                                        try { fn = JSON.parse(routine.food_notes ?? '{}') } catch { /* ignore */ }
+                                        const foodLabel = fn.food === 'verde' ? 'Ótima' : fn.food === 'amarelo' ? 'Média' : fn.food === 'vermelho' ? 'Ruim' : fn.food ?? '—'
+                                        const foodEmoji = fn.food === 'verde' ? '😊' : fn.food === 'amarelo' ? '😐' : fn.food === 'vermelho' ? '😞' : '🍽️'
+                                        return (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-blue-50 rounded-2xl p-4 text-center">
+                                                    <p className="text-2xl mb-1">💧</p>
+                                                    <p className="text-lg font-bold text-blue-700">{routine.water_glasses}</p>
+                                                    <p className="text-[10px] text-blue-500 font-medium">copos de agua</p>
+                                                </div>
+                                                <div className="bg-green-50 rounded-2xl p-4 text-center">
+                                                    <p className="text-2xl mb-1">🚶</p>
+                                                    <p className="text-lg font-bold text-green-700">
+                                                        {fn.walkDuration ? `${fn.walkDuration} min` : '—'}
+                                                    </p>
+                                                    <p className="text-[10px] text-green-500 font-medium">caminhada</p>
+                                                </div>
+                                                <div className="bg-purple-50 rounded-2xl p-4 text-center">
+                                                    <p className="text-2xl mb-1">🏋️</p>
+                                                    <p className="text-lg font-bold text-purple-700">
+                                                        {fn.exercise?.duration ? `${fn.exercise.duration} min` : '—'}
+                                                    </p>
+                                                    <p className="text-[10px] text-purple-500 font-medium">
+                                                        {fn.exercise?.intensity ?? 'exercicio'}
+                                                    </p>
+                                                </div>
+                                                <div className="bg-orange-50 rounded-2xl p-4 text-center">
+                                                    <p className="text-2xl mb-1">{foodEmoji}</p>
+                                                    <p className="text-lg font-bold text-orange-700">{foodLabel}</p>
+                                                    <p className="text-[10px] text-orange-500 font-medium">alimentacao</p>
+                                                </div>
                                             </div>
-                                            <div className="bg-green-50 rounded-2xl p-4 text-center">
-                                                <p className="text-2xl mb-1">🚶</p>
-                                                <p className="text-lg font-bold text-green-700">{routine.walked ? 'Sim' : 'Nao'}</p>
-                                                <p className="text-[10px] text-green-500 font-medium">caminhou</p>
-                                            </div>
-                                            <div className="bg-purple-50 rounded-2xl p-4 text-center">
-                                                <p className="text-2xl mb-1">🏋️</p>
-                                                <p className="text-lg font-bold text-purple-700">{routine.exercise_minutes} min</p>
-                                                <p className="text-[10px] text-purple-500 font-medium">exercicio</p>
-                                            </div>
-                                            <div className="bg-orange-50 rounded-2xl p-4 text-center">
-                                                <p className="text-2xl mb-1">🍽️</p>
-                                                <p className="text-lg font-bold text-orange-700">{routine.food_quality}/5</p>
-                                                <p className="text-[10px] text-orange-500 font-medium">alimentacao</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {routine?.observation && (
-                                        <div className="mt-3 p-3 bg-gray-50 rounded-2xl">
-                                            <p className="text-xs text-gray-500 font-bold mb-1">Observacao</p>
-                                            <p className="text-sm text-gray-700">{routine.observation}</p>
-                                        </div>
-                                    )}
+                                        )
+                                    })()}
                                 </div>
                             </>
                         )}

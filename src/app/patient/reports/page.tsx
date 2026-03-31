@@ -292,7 +292,7 @@ function ReportsContent() {
                 </div>
 
                 {/* Period selector */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-1.5 flex gap-1 relative z-10">
+                <div data-onboarding="reports-period" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-1.5 flex gap-1 relative z-10">
                     {([7, 14, 30] as const).map(p => (
                         <button
                             key={p}
