@@ -72,18 +72,28 @@ export default function PatientHomePage() {
         setSchedules((data as unknown as MedSchedule[]) ?? [])
         setLoading(false)
 
-        // Schedule local push notifications for pending meds
-        const pending = (data as unknown as MedSchedule[])?.filter(s => s.status === 'pending') ?? []
-        if (pending.length > 0) {
-            registerServiceWorker()
-            scheduleMedNotifications(pending as any, 5)
-        }
+        // Schedule local push notifications for pending meds (respecting user preferences)
+        try {
+            const prefsStr = localStorage.getItem('cc_notif_prefs')
+            const notifPrefs = prefsStr ? JSON.parse(prefsStr) : null
+            const medReminders = notifPrefs?.medReminders ?? true
+            const leadMin = notifPrefs?.medLeadMinutes ?? parseInt(localStorage.getItem('cc_notif_lead_minutes') || '5')
+
+            if (medReminders) {
+                const pending = (data as unknown as MedSchedule[])?.filter(s => s.status === 'pending') ?? []
+                if (pending.length > 0) {
+                    registerServiceWorker()
+                    scheduleMedNotifications(pending as any, leadMin)
+                }
+            }
+        } catch { /* ignore prefs errors */ }
     }, [user])
 
     useEffect(() => {
         if (!authLoading && user) loadSchedules()
         else if (!authLoading) setLoading(false)
     }, [authLoading, user, loadSchedules])
+
 
     const takenCount = schedules.filter(s => s.status === 'taken').length
     const totalCount = schedules.length
@@ -147,15 +157,15 @@ export default function PatientHomePage() {
                             <h1 className="text-lg font-extrabold text-gray-900 leading-tight">{userName}</h1>
                         </div>
                     </Link>
-                    <button
-                        onClick={() => setShowNotifications(true)}
-                        className="w-10 h-10 rounded-xl bg-[#fef3f3] flex items-center justify-center relative"
+                    <Link
+                        href="/patient/profile"
+                        className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                     >
-                        <IconBell size={20} color="#f87171" />
-                        {schedules.some(s => s.status === 'pending') && (
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-[#f87171] rounded-full" />
-                        )}
-                    </button>
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </Link>
                 </div>
             </div>
 
@@ -163,7 +173,7 @@ export default function PatientHomePage() {
 
                 {/* ── Next Medication Card ───────────────────── */}
                 {nextPending ? (
-                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                    <div data-onboarding="next-med" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                         <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-3">Próximo Medicamento</p>
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
@@ -205,7 +215,7 @@ export default function PatientHomePage() {
                 {/* ── Quick Actions Row ─────────────────────── */}
                 <div className="grid grid-cols-2 gap-3">
                     {/* Daily Goal */}
-                    <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div data-onboarding="daily-goal" className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
                         <div className="relative w-[76px] h-[76px] flex-shrink-0">
                             <svg width={76} height={76} viewBox="0 0 76 76">
                                 <circle cx={38} cy={38} r={circleRadius} fill="none" stroke="#f0f8ff" strokeWidth={7} />
@@ -434,6 +444,7 @@ export default function PatientHomePage() {
                     </div>
                 </div>
             )}
+
         </div>
     )
 }

@@ -169,7 +169,52 @@ function ReportsContent() {
     }
 
     const generateReportText = () => {
-        return `*Relatório de Bem-Estar - ${patientName || 'Paciente'}*\nPeríodo: Últimos ${period} dias\n\n*Adesão de Medicamentos*: ${overallRate}%\n✅ Tomados: ${overallTaken}\n❌ Perdidos/Pulados: ${overallTotal - overallTaken}\n\nAcesse o App Care Close para ver o histórico completo!`;
+        const lines: string[] = []
+        lines.push(`*Relatorio de Bem-Estar - ${patientName || 'Paciente'}*`)
+        lines.push(`Periodo: Ultimos ${period} dias`)
+        lines.push(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`)
+        lines.push('')
+
+        // Medication adherence
+        lines.push(`*Adesao de Medicamentos: ${overallRate}%*`)
+        lines.push(`- Tomados: ${overallTaken}`)
+        lines.push(`- Perdidos: ${stats.reduce((s, d) => s + d.missed, 0)}`)
+        lines.push(`- Pulados: ${stats.reduce((s, d) => s + d.skipped, 0)}`)
+        lines.push(`- Total de doses: ${overallTotal}`)
+        lines.push('')
+
+        // Routine averages
+        const daysWithRoutine = stats.filter(d => d.routine)
+        if (daysWithRoutine.length > 0) {
+            const avgWater = Math.round(daysWithRoutine.reduce((s, d) => s + (d.routine?.water ?? 0), 0) / daysWithRoutine.length)
+            const totalWalk = daysWithRoutine.filter(d => (d.routine?.walk ?? 0) > 0).length
+            const foodCounts = { verde: 0, amarelo: 0, vermelho: 0 }
+            daysWithRoutine.forEach(d => {
+                if (d.routine?.food) foodCounts[d.routine.food]++
+            })
+
+            lines.push(`*Rotina Diaria (media de ${daysWithRoutine.length} dias)*`)
+            lines.push(`- Agua: ${avgWater} copos/dia`)
+            lines.push(`- Caminhadas: ${totalWalk} de ${daysWithRoutine.length} dias`)
+            if (foodCounts.verde + foodCounts.amarelo + foodCounts.vermelho > 0) {
+                lines.push(`- Alimentacao: Boa(${foodCounts.verde}) Regular(${foodCounts.amarelo}) Ruim(${foodCounts.vermelho})`)
+            }
+            lines.push('')
+        }
+
+        // Today's doses
+        if (todaySchedules.length > 0) {
+            lines.push(`*Doses de Hoje*`)
+            todaySchedules.forEach(s => {
+                const time = formatTime(s.scheduled_time)
+                const status = s.status === 'taken' ? 'Tomado' : s.status === 'missed' ? 'Perdido' : s.status === 'skipped' ? 'Pulado' : 'Pendente'
+                lines.push(`- ${time} ${s.medication.name} (${s.medication.dosage} ${s.medication.unit}) - ${status}`)
+            })
+            lines.push('')
+        }
+
+        lines.push('Enviado pelo App Care Close')
+        return lines.join('\n')
     }
 
     const shareWhatsApp = () => {
@@ -247,7 +292,7 @@ function ReportsContent() {
                 </div>
 
                 {/* Period selector */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-1.5 flex gap-1 relative z-10">
+                <div data-onboarding="reports-period" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-1.5 flex gap-1 relative z-10">
                     {([7, 14, 30] as const).map(p => (
                         <button
                             key={p}

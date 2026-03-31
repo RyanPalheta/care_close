@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { IconHome, IconPill, IconRoutine, IconBarChart, IconLogout, IconCamera, IconBell } from '@/components/Icons'
-import { registerServiceWorker, subscribeToPush } from '@/lib/push-notifications'
+import { IconHome, IconPill, IconRoutine, IconBarChart, IconLogout, IconCamera } from '@/components/Icons'
+import { registerServiceWorker } from '@/lib/push-notifications'
 
 interface PatientProfile {
     id: string
@@ -29,16 +29,10 @@ export default function PatientProfilePage() {
     const [notes, setNotes] = useState('')
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
-    const [notifEnabled, setNotifEnabled] = useState(false)
-    const [notifLeadTime, setNotifLeadTime] = useState(5)
-    const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default')
 
     useEffect(() => {
         if (!user) return
         loadProfile()
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-            setNotifPermission(Notification.permission)
-        }
     }, [user])
 
     async function loadProfile() {
@@ -58,7 +52,13 @@ export default function PatientProfilePage() {
 
         if (patientData) {
             setPatient(patientData)
-            setBirthDate(patientData.birth_date || '')
+            // Convert ISO (yyyy-mm-dd) to dd/mm/aaaa for display
+            if (patientData.birth_date) {
+                const [y, m, d] = patientData.birth_date.split('-')
+                setBirthDate(`${d}/${m}/${y}`)
+            } else {
+                setBirthDate('')
+            }
             setNotes(patientData.medical_notes || '')
             // Avatar: prefer patients.avatar_url (uploaded photo), fallback to users.avatar_url
             setAvatarUrl(patientData.avatar_url || userData?.avatar_url || null)
@@ -107,10 +107,39 @@ export default function PatientProfilePage() {
         }
     }
 
+    function handleBirthDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+        let value = e.target.value.replace(/\D/g, '')
+        if (value.length > 8) value = value.slice(0, 8)
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4)
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2)
+        }
+        setBirthDate(value)
+    }
+
+    function birthDateToISO(ddmmyyyy: string): string | null {
+        const parts = ddmmyyyy.split('/')
+        if (parts.length !== 3 || parts[2].length !== 4) return null
+        const [dd, mm, yyyy] = parts
+        const day = parseInt(dd, 10)
+        const month = parseInt(mm, 10)
+        const year = parseInt(yyyy, 10)
+        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) return null
+        return `${yyyy}-${mm}-${dd}`
+    }
+
     async function handleSave(e: React.FormEvent) {
         e.preventDefault()
         setSaving(true)
         setMessage(null)
+
+        const isoDate = birthDate ? birthDateToISO(birthDate) : null
+        if (birthDate && !isoDate) {
+            setMessage({ text: 'Data de nascimento inválida. Use o formato dd/mm/aaaa.', type: 'error' })
+            setSaving(false)
+            return
+        }
 
         try {
             if (name !== profile?.name) {
@@ -119,7 +148,7 @@ export default function PatientProfilePage() {
             await supabase.from('users').update({ name }).eq('id', user!.id)
             if (patient) {
                 await supabase.from('patients').update({
-                    birth_date: birthDate || null,
+                    birth_date: isoDate,
                     medical_notes: notes || null
                 }).eq('id', patient.id)
             }
@@ -131,16 +160,6 @@ export default function PatientProfilePage() {
         }
     }
 
-    async function handleEnableNotifications() {
-        const sub = await subscribeToPush()
-        if (sub || Notification.permission === 'granted') {
-            setNotifEnabled(true)
-            setNotifPermission('granted')
-            setMessage({ text: 'Notificações ativadas!', type: 'success' })
-        } else {
-            setMessage({ text: 'Permissão negada. Verifique as configurações do navegador.', type: 'error' })
-        }
-    }
 
     async function handleLogout() {
         await supabase.auth.signOut()
@@ -236,8 +255,9 @@ export default function PatientProfilePage() {
                         <div>
                             <label className="text-xs font-bold text-gray-500 mb-1.5 block uppercase tracking-wide">Data de Nascimento</label>
                             <input
-                                type="date" className="input-field"
-                                value={birthDate} onChange={e => setBirthDate(e.target.value)}
+                                type="text" inputMode="numeric" className="input-field"
+                                placeholder="dd/mm/aaaa" maxLength={10}
+                                value={birthDate} onChange={handleBirthDateChange}
                             />
                         </div>
                         <div>
@@ -254,62 +274,69 @@ export default function PatientProfilePage() {
                     </form>
                 </div>
 
-                {/* Notification Settings */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-xl bg-[#fef3f3] flex items-center justify-center">
-                            <IconBell size={16} color="#f87171" />
-                        </div>
-                        <h2 className="font-extrabold text-gray-900">Notificações</h2>
+                {/* Notificações */}
+                <Link
+                    href="/patient/notifications"
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-violet-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
                     </div>
-
-                    <div className="flex flex-col gap-4">
-                        {/* Enable push */}
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-semibold text-gray-800 text-sm">Lembretes de Remédio</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {notifPermission === 'granted' ? 'Ativado' : 'Requer permissão do navegador'}
-                                </p>
-                            </div>
-                            {notifPermission !== 'granted' ? (
-                                <button
-                                    onClick={handleEnableNotifications}
-                                    className="bg-[#42b6f0] text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors"
-                                >
-                                    Ativar
-                                </button>
-                            ) : (
-                                <div className="w-5 h-5 rounded-full bg-[#4ade80] flex items-center justify-center">
-                                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Lead time slider */}
-                        {notifPermission === 'granted' && (
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-semibold text-gray-600">Avisar com antecedência</p>
-                                    <span className="text-xs font-extrabold text-[#42b6f0]">{notifLeadTime} min antes</span>
-                                </div>
-                                <input
-                                    type="range" min={1} max={30} step={1}
-                                    value={notifLeadTime}
-                                    onChange={e => setNotifLeadTime(Number(e.target.value))}
-                                    className="w-full accent-[#42b6f0]"
-                                />
-                                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                                    <span>1 min</span>
-                                    <span>15 min</span>
-                                    <span>30 min</span>
-                                </div>
-                            </div>
-                        )}
+                    <div className="flex-1">
+                        <p className="font-extrabold text-gray-900">Notificações</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Lembretes, estoque e rotina</p>
                     </div>
-                </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </Link>
+
+                {/* Minha Equipe */}
+                <Link
+                    data-onboarding="team-link"
+                    href="/patient/team"
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-sky-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#42b6f0" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-extrabold text-gray-900">Minha Equipe</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Convide cuidadores e familiares</p>
+                    </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </Link>
+
+                {/* Instruções */}
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('cc_onboarding_done')
+                        window.dispatchEvent(new CustomEvent('cc-start-tour'))
+                        router.push('/patient/home')
+                    }}
+                    className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-4 flex items-center gap-4 hover:bg-amber-50 transition-colors"
+                >
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 text-xl">
+                        📖
+                    </div>
+                    <div className="flex-1 text-left">
+                        <p className="font-extrabold text-gray-900">Instruções</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Como usar o Care Close</p>
+                    </div>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
 
                 {/* Logout */}
                 <button
@@ -320,6 +347,7 @@ export default function PatientProfilePage() {
                     Sair da Conta
                 </button>
             </div>
+
 
             {/* Bottom Nav */}
             <nav className="bottom-nav">
