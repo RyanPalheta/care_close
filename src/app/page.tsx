@@ -13,6 +13,8 @@ export default function HomePage() {
         if (!loading && user && profile) {
             if (profile.role === 'caregiver') {
                 router.replace('/caregiver/home')
+            } else if (profile.role === 'family') {
+                router.replace('/guest/home')
             } else {
                 router.replace('/patient/home')
             }
@@ -39,11 +41,8 @@ export default function HomePage() {
             {/* Main content */}
             <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 relative z-10">
                 {/* Logo / icon */}
-                <div className="w-24 h-24 rounded-3xl bg-white shadow-xl shadow-[#42b6f0]/20 flex items-center justify-center mb-8 border border-[#42b6f0]/10">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <rect x="6" y="20" width="36" height="8" rx="4" fill="#42b6f0" />
-                        <rect x="20" y="6" width="8" height="36" rx="4" fill="#42b6f0" />
-                    </svg>
+                <div className="w-28 h-28 rounded-3xl bg-white shadow-xl shadow-[#42b6f0]/20 flex items-center justify-center mb-8 border border-[#42b6f0]/10 overflow-hidden">
+                    <img src="/logo.jpg" alt="Care Close" className="w-full h-full object-contain p-2" />
                 </div>
 
                 <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">Care Close</h1>
@@ -74,15 +73,9 @@ export default function HomePage() {
                 >
                     Entrar
                 </Link>
-                <Link
-                    href="/auth?mode=signup"
-                    className="w-full py-4 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 text-center font-bold text-base hover:border-[#42b6f0] hover:text-[#42b6f0] transition-all active:scale-95"
-                >
-                    Criar conta
-                </Link>
-                <p className="text-center text-xs text-gray-400 mt-2">
-                    Ao criar conta, você aceita nossos{' '}
-                    <span className="text-[#42b6f0] font-semibold">Termos de Uso</span>
+                <p className="text-center text-xs text-gray-400 mt-1">
+                    Adquira sua licenca em{' '}
+                    <span className="text-[#42b6f0] font-semibold">careclose.com.br</span>
                 </p>
             </div>
         </div>

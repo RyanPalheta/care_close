@@ -23,15 +23,16 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') return null
 
+    // If no VAPID key, skip server push — local notifications still work
+    if (!VAPID_PUBLIC_KEY) return null
+
     try {
-        // If no VAPID key, use a browser-local scheduling approach
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: VAPID_PUBLIC_KEY || undefined,
+            applicationServerKey: VAPID_PUBLIC_KEY,
         })
         return sub
-    } catch (e) {
-        // No server VAPID: fallback to local timeout scheduling
+    } catch {
         return null
     }
 }

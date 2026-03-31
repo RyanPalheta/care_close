@@ -63,6 +63,8 @@ function AddMedicationForm() {
     const [unit, setUnit] = useState('pílulas')
     const [frequency, setFrequency] = useState('daily')
     const [period, setPeriod] = useState('depois_almoco')
+    const [scheduleMode, setScheduleMode] = useState<'meal' | 'time'>('meal')
+    const [specificTimes, setSpecificTimes] = useState<string[]>(['08:00'])
     const [stockQty, setStockQty] = useState('')
     const [stockAlert, setStockAlert] = useState('5')
     const [needsPrep, setNeedsPrep] = useState(false)
@@ -78,14 +80,38 @@ function AddMedicationForm() {
         }
 
         if (!user) return
-        supabase
+
+        async function detectPatient() {
+        // Try by user_id first (patient with own account)
+        const { data: byUserId } = await supabase
             .from('patients')
             .select('id')
-            .eq('user_id', user.id)
+            .eq('user_id', user!.id)
             .maybeSingle()
-            .then(({ data }) => {
-                if (data) setPatientId(data.id)
-            })
+
+        if (byUserId) {
+            setPatientId(byUserId.id)
+            return
+        }
+
+        // Fallback: try via license owned by this user
+        const { data: license } = await supabase
+            .from('licenses')
+            .select('id')
+            .or(`owner_id.eq.${user!.id},assigned_to.eq.${user!.id}`)
+            .eq('status', 'active')
+            .maybeSingle()
+
+        if (license) {
+            const { data: byLicense } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('license_id', license.id)
+                .maybeSingle()
+            if (byLicense) setPatientId(byLicense.id)
+        }
+        }
+        detectPatient()
     }, [user, searchParams])
 
     async function handleSubmit(e: React.FormEvent) {
@@ -97,13 +123,25 @@ function AddMedicationForm() {
         setLoading(true)
         setError(null)
 
+        // If using specific times, store them in period as JSON and set frequency accordingly
+        let finalPeriod = period
+        let finalFrequency = frequency
+        if (scheduleMode === 'time') {
+            const validTimes = specificTimes.filter(t => t)
+            finalPeriod = JSON.stringify({ mode: 'time', times: validTimes })
+            // Auto-set frequency based on number of times
+            if (validTimes.length === 1) finalFrequency = 'daily'
+            else if (validTimes.length === 2) finalFrequency = 'twice_day'
+            else if (validTimes.length >= 3) finalFrequency = 'three_day'
+        }
+
         const { data: newMed, error: err } = await supabase.from('medications').insert({
             patient_id: patientId,
             name,
             dosage,
             unit,
-            frequency,
-            period,
+            frequency: finalFrequency,
+            period: finalPeriod,
             stock_quantity: stockQty ? parseInt(stockQty) : 0,
             stock_alert_at: parseInt(stockAlert),
             needs_prep: needsPrep,
@@ -220,19 +258,104 @@ function AddMedicationForm() {
                     </div>
                 </div>
 
-                {/* Visual Period Selector (Meals) */}
+                {/* Schedule Mode Selector */}
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                    <label className="text-[13px] font-extrabold text-gray-400 uppercase tracking-wide mb-3 block">Relação com Refeições</label>
-                    <select
-                        className="w-full bg-gray-50 border-2 border-transparent focus:border-[#7c3aed] focus:bg-white text-gray-900 text-sm rounded-xl py-3 px-4 font-bold outline-none mb-3 cursor-pointer appearance-none"
-                        value={period}
-                        onChange={e => setPeriod(e.target.value)}
-                    >
-                        <option value="">Nenhuma relação (Qualquer hora)</option>
-                        {PERIODS.map(p => <option key={p.value} value={p.value}>{p.icon} {p.label}</option>)}
-                    </select>
+                    <label className="text-[13px] font-extrabold text-gray-400 uppercase tracking-wide mb-3 block">Quando tomar?</label>
 
-                    <p className="text-xs text-gray-400 font-medium">As refeições ajudam a organizar os horários automaticamente e evitam dores de estômago com alguns medicamentos.</p>
+                    {/* Mode tabs */}
+                    <div className="flex gap-2 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setScheduleMode('meal')}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                                scheduleMode === 'meal'
+                                    ? 'bg-[#f5f3ff] border-[#7c3aed] text-[#7c3aed]'
+                                    : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'
+                            }`}
+                        >
+                            Em relacao a refeicao
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setScheduleMode('time')}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                                scheduleMode === 'time'
+                                    ? 'bg-[#f5f3ff] border-[#7c3aed] text-[#7c3aed]'
+                                    : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'
+                            }`}
+                        >
+                            Horario especifico
+                        </button>
+                    </div>
+
+                    {scheduleMode === 'meal' ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-2">
+                                {PERIODS.map(p => (
+                                    <button
+                                        key={p.value}
+                                        type="button"
+                                        onClick={() => setPeriod(p.value)}
+                                        className={`text-left p-3 rounded-2xl border-2 transition-all ${
+                                            period === p.value
+                                                ? 'bg-[#f5f3ff] border-[#7c3aed] shadow-sm'
+                                                : 'bg-white border-gray-100 hover:border-gray-200'
+                                        }`}
+                                    >
+                                        <span className="text-lg mr-1">{p.icon}</span>
+                                        <span className={`text-xs font-bold ${period === p.value ? 'text-[#7c3aed]' : 'text-gray-600'}`}>{p.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-400 font-medium mt-3">Os horarios serao organizados com base nas suas refeicoes.</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex flex-col gap-2">
+                                {specificTimes.map((time, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-full bg-[#f5f3ff] flex items-center justify-center flex-shrink-0">
+                                            <span className="text-xs font-bold text-[#7c3aed]">{idx + 1}</span>
+                                        </div>
+                                        <input
+                                            type="time"
+                                            value={time}
+                                            onChange={e => {
+                                                const updated = [...specificTimes]
+                                                updated[idx] = e.target.value
+                                                setSpecificTimes(updated)
+                                            }}
+                                            className="flex-1 bg-gray-50 border-2 border-transparent focus:border-[#7c3aed] focus:bg-white text-gray-900 text-sm rounded-xl py-2.5 px-4 font-bold outline-none transition-all"
+                                        />
+                                        {specificTimes.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSpecificTimes(specificTimes.filter((_, i) => i !== idx))}
+                                                className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                                            >
+                                                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            {specificTimes.length < 6 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSpecificTimes([...specificTimes, '12:00'])}
+                                    className="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm font-bold text-gray-400 hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors flex items-center justify-center gap-1"
+                                >
+                                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                    Adicionar horario
+                                </button>
+                            )}
+                            <p className="text-xs text-gray-400 font-medium mt-3">Voce sera notificado nos horarios definidos.</p>
+                        </>
+                    )}
                 </div>
 
                 {/* Stock Control */}

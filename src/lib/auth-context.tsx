@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js'
 interface UserProfile {
     id: string
     name: string
-    role: 'patient' | 'family' | 'caregiver' | 'institution'
+    role: 'patient' | 'family' | 'caregiver'
     avatar_url?: string
 }
 
@@ -61,24 +61,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => subscription.unsubscribe()
     }, [])
 
-    async function fetchProfile(userId: string) {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('id, name, role, avatar_url')
-                .eq('id', userId)
-                .single()
-            
-            if (error) {
-                console.error("fetchProfile Superbase error:", error)
+    async function fetchProfile(userId: string, retries = 3) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                // Ensure we have an active session before querying (RLS depends on auth.uid())
+                const { data: sessionData } = await supabase.auth.getSession()
+                if (!sessionData.session) {
+                    console.warn(`fetchProfile attempt ${attempt}: no active session, retrying...`)
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 1000 * attempt))
+                        continue
+                    }
+                    setProfile(null)
+                    setLoading(false)
+                    return
+                }
+
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, name, role, avatar_url')
+                    .eq('id', userId)
+                    .maybeSingle()
+
+                if (error) {
+                    console.error(`fetchProfile attempt ${attempt}/${retries} error:`, error.message || "Unknown error")
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 1000 * attempt))
+                        continue
+                    }
+                }
+
+                if (data) {
+                    setProfile(data)
+                    setLoading(false)
+                    return
+                }
+
+                // data is null — row not found or RLS blocked
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 1000 * attempt))
+                    continue
+                }
+
+                setProfile(null)
+                setLoading(false)
+                return
+            } catch (err) {
+                console.error(`fetchProfile attempt ${attempt}/${retries} exception:`, err)
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 1000 * attempt))
+                    continue
+                }
+                setProfile(null)
+                setLoading(false)
             }
-            setProfile(data)
-        } catch (err) {
-            console.error("fetchProfile exception:", err)
-            setProfile(null)
-        } finally {
-            setLoading(false)
         }
+        setLoading(false)
     }
 
     async function signOut() {

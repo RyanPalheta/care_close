@@ -15,38 +15,70 @@ export default function AddPatientPage() {
     const [birthDate, setBirthDate] = useState('')
     const [medicalNotes, setMedicalNotes] = useState('')
 
+    function handleBirthDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+        let value = e.target.value.replace(/\D/g, '')
+        if (value.length > 8) value = value.slice(0, 8)
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4)
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2)
+        }
+        setBirthDate(value)
+    }
+
+    function birthDateToISO(ddmmyyyy: string): string | null {
+        const parts = ddmmyyyy.split('/')
+        if (parts.length !== 3 || parts[2].length !== 4) return null
+        const [dd, mm, yyyy] = parts
+        const day = parseInt(dd, 10)
+        const month = parseInt(mm, 10)
+        const year = parseInt(yyyy, 10)
+        if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) return null
+        return `${yyyy}-${mm}-${dd}`
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!user) return
         setLoading(true)
         setError(null)
 
+        const isoDate = birthDate ? birthDateToISO(birthDate) : null
+        if (birthDate && !isoDate) {
+            setError('Data de nascimento inválida. Use o formato dd/mm/aaaa.')
+            setLoading(false)
+            return
+        }
+
         try {
-            // 1. Find or create license for this user
-            let { data: license, error: fetchErr } = await supabase
+            // 1. Find the license owned by or assigned to this user
+            const { data: license } = await supabase
                 .from('licenses')
-                .select('id')
-                .eq('owner_id', user.id)
+                .select('id, max_patients')
+                .or(`owner_id.eq.${user.id},assigned_to.eq.${user.id}`)
+                .eq('status', 'active')
                 .maybeSingle()
 
-            if (fetchErr) throw fetchErr
-
             if (!license) {
-                const { data: newLicense, error: licenseErr } = await supabase
-                    .from('licenses')
-                    .insert({ owner_id: user.id, plan_type: 'family', max_patients: 1, max_members: 5 })
-                    .select('id')
-                    .single()
-                if (licenseErr) throw licenseErr
-                license = newLicense
+                throw new Error('Voce nao possui uma licenca ativa. Adquira sua licenca para cadastrar pacientes.')
             }
 
-            // 2. Insert patient (with user_id so the home page can find it)
+            // 2. Check patient limit
+            const { count } = await supabase
+                .from('patients')
+                .select('id', { count: 'exact', head: true })
+                .eq('license_id', license.id)
+
+            if ((count || 0) >= license.max_patients) {
+                throw new Error(`Limite de ${license.max_patients} pacientes atingido. Atualize sua licenca para adicionar mais.`)
+            }
+
+            // 3. Insert patient
             const { error: patientErr } = await supabase.from('patients').insert({
-                license_id: license!.id,
+                license_id: license.id,
                 user_id: user.id,
                 name,
-                birth_date: birthDate || null,
+                birth_date: isoDate,
                 medical_notes: medicalNotes || null,
             })
 
@@ -59,7 +91,7 @@ export default function AddPatientPage() {
                 router.push('/patient/medications')
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err)
+            const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || JSON.stringify(err)
             setError(msg)
             console.error('Patient registration error:', err)
         } finally {
@@ -111,10 +143,13 @@ export default function AddPatientPage() {
                         Data de nascimento
                     </label>
                     <input
-                        type="date"
+                        type="text"
+                        inputMode="numeric"
                         className="input-field"
+                        placeholder="dd/mm/aaaa"
+                        maxLength={10}
                         value={birthDate}
-                        onChange={e => setBirthDate(e.target.value)}
+                        onChange={handleBirthDateChange}
                     />
                 </div>
 

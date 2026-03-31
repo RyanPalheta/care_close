@@ -421,7 +421,7 @@ export default function CaregiverSchedulePage() {
                 </Link>
                 <Link href="/caregiver/settings" className="bottom-nav-item">
                     <IconSettings size={22} />
-                    <span>Ajustes</span>
+                    <span>Config</span>
                 </Link>
             </nav>
         </div>
