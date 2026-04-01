@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 
 type Status = 'loading' | 'signup_form' | 'accepting' | 'success' | 'error'
-type Role = 'family' | 'caregiver'
-
 export default function InvitePage() {
     const { token } = useParams<{ token: string }>()
     const { user, loading: authLoading } = useAuth()
@@ -18,7 +16,6 @@ export default function InvitePage() {
 
     // Form fields
     const [formName, setFormName] = useState('')
-    const [formRole, setFormRole] = useState<Role>('family')
     const [formEmail, setFormEmail] = useState('')
     const [formPassword, setFormPassword] = useState('')
     const [saving, setSaving] = useState(false)
@@ -115,11 +112,11 @@ export default function InvitePage() {
                 }
             }
 
-            // Upsert profile (users table has no email column - email is in auth.users)
+            // Upsert profile — invite guests are always 'family' role for correct routing
             const { error: profileError } = await supabase.from('users').upsert({
                 id: currentUser.id,
                 name: formName.trim(),
-                role: formRole,
+                role: 'family',
             }, { onConflict: 'id' })
 
             if (profileError) {
@@ -218,50 +215,6 @@ export default function InvitePage() {
                                     required
                                     className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-gray-900 text-sm font-medium focus:outline-none focus:border-[#42b6f0] focus:ring-2 focus:ring-[#42b6f0]/20 transition-all"
                                 />
-                            </div>
-
-                            {/* Role */}
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wide">
-                                    Voce e...
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormRole('family')}
-                                        className={`py-3.5 rounded-2xl border-2 text-sm font-bold transition-all ${
-                                            formRole === 'family'
-                                                ? 'border-[#42b6f0] bg-sky-50 text-[#42b6f0]'
-                                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                                        }`}
-                                    >
-                                        <div className="flex flex-col items-center gap-1.5">
-                                            <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                                            </svg>
-                                            Familiar
-                                        </div>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormRole('caregiver')}
-                                        className={`py-3.5 rounded-2xl border-2 text-sm font-bold transition-all ${
-                                            formRole === 'caregiver'
-                                                ? 'border-[#7c3aed] bg-violet-50 text-[#7c3aed]'
-                                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                                        }`}
-                                    >
-                                        <div className="flex flex-col items-center gap-1.5">
-                                            <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                                <polyline points="14 2 14 8 20 8" />
-                                                <line x1="12" y1="18" x2="12" y2="12" />
-                                                <line x1="9" y1="15" x2="15" y2="15" />
-                                            </svg>
-                                            Cuidador
-                                        </div>
-                                    </button>
-                                </div>
                             </div>
 
                             {/* Email */}
