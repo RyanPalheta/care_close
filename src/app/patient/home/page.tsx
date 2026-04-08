@@ -142,10 +142,13 @@ export default function PatientHomePage() {
         <div className="min-h-screen bg-[#f7f8fc] pb-28" style={{ fontFamily: 'Lexend, sans-serif' }}>
 
             {/* ── Header ─────────────────────────────────────── */}
-            <div className="bg-white px-5 pt-12 pb-5 shadow-sm">
+            <div
+                className="px-5 pt-12 pb-5"
+                style={{ background: 'linear-gradient(135deg, #42b6f0 0%, #7bc843 100%)' }}
+            >
                 <div className="flex items-center justify-between">
                     <Link href="/patient/profile" className="flex items-center gap-3 active:scale-95 transition-transform">
-                        <div className="w-11 h-11 rounded-2xl overflow-hidden bg-gradient-to-br from-sky-200 to-sky-300 flex-shrink-0">
+                        <div className="w-11 h-11 rounded-2xl overflow-hidden bg-white/25 flex-shrink-0 ring-2 ring-white/40">
                             {avatarUrl
                                 ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 : <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
@@ -153,19 +156,25 @@ export default function PatientHomePage() {
                                 </div>}
                         </div>
                         <div>
-                            <p className="text-xs text-gray-400 font-medium">{greeting},</p>
-                            <h1 className="text-lg font-extrabold text-gray-900 leading-tight">{userName}</h1>
+                            <p className="text-xs text-white/70 font-medium">{greeting},</p>
+                            <h1 className="text-lg font-extrabold text-white leading-tight">{userName}</h1>
                         </div>
                     </Link>
-                    <Link
-                        href="/patient/profile"
-                        className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                    >
-                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                        </svg>
-                    </Link>
+                    {/* Logo + settings */}
+                    <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/20 overflow-hidden flex items-center justify-center">
+                            <img src="/logo.jpg" alt="Care Close" className="w-full h-full object-contain p-0.5" />
+                        </div>
+                        <Link
+                            href="/patient/profile"
+                            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                        >
+                            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -198,7 +207,8 @@ export default function PatientHomePage() {
                         </div>
                         <button
                             onClick={() => setShowModal(nextPending)}
-                            className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-100"
+                            className="w-full text-white font-extrabold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                            style={{ background: 'linear-gradient(135deg, #42b6f0 0%, #7bc843 100%)', boxShadow: '0 6px 20px rgba(123,200,67,0.30)' }}
                         >
                             <IconCheckCircle size={18} color="white" /> Confirmar Ingestão
                         </button>
@@ -359,7 +369,8 @@ export default function PatientHomePage() {
                             <button
                                 onClick={() => confirmDose(showModal)}
                                 disabled={confirmingDose}
-                                className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-extrabold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-200 disabled:opacity-60"
+                                className="w-full text-white font-extrabold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                                style={{ background: 'linear-gradient(135deg, #42b6f0 0%, #7bc843 100%)', boxShadow: '0 6px 20px rgba(123,200,67,0.30)' }}
                             >
                                 {confirmingDose
                                     ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
