@@ -162,8 +162,8 @@ export default function PatientHomePage() {
                     </Link>
                     {/* Logo + settings */}
                     <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-white/20 overflow-hidden flex items-center justify-center">
-                            <img src="/logo.jpg" alt="Care Close" className="w-full h-full object-contain p-0.5" />
+                        <div className="w-9 h-9 flex items-center justify-center">
+                            <img src="/icon-only.png" alt="Care Close" className="w-full h-full object-contain" />
                         </div>
                         <Link
                             href="/patient/profile"

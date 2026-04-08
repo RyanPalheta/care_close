@@ -41,12 +41,12 @@ export default function HomePage() {
 
             {/* Main content */}
             <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 relative z-10">
-                {/* Logo with gradient glow */}
+                {/* Icon */}
                 <div
-                    className="w-32 h-32 rounded-[2rem] bg-white flex items-center justify-center mb-6 overflow-hidden"
-                    style={{ boxShadow: '0 16px 48px -8px rgba(66,182,240,0.30), 0 8px 24px -4px rgba(123,200,67,0.20)' }}
+                    className="w-28 h-28 rounded-[2rem] bg-white flex items-center justify-center mb-6 overflow-hidden"
+                    style={{ boxShadow: '0 16px 48px -8px rgba(66,182,240,0.35), 0 8px 24px -4px rgba(123,200,67,0.25)' }}
                 >
-                    <img src="/logo.jpg" alt="Care Close" className="w-full h-full object-contain p-2" />
+                    <img src="/icon-only.png" alt="Care Close" className="w-[85%] h-[85%] object-contain" />
                 </div>
 
                 <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">Care Close</h1>
