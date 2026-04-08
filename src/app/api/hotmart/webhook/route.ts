@@ -148,11 +148,15 @@ export async function POST(request: NextRequest) {
             }, { onConflict: 'user_id' })
         }
 
-        // Send password reset email so new user can set their password
+        // Send password setup email to new user
+        // Uses Supabase's built-in email (template customizable in dashboard)
         if (isNewUser) {
-            await supabase.auth.admin.generateLink({
-                type: 'magiclink',
-                email: buyerEmail,
+            const anonClient = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            )
+            await anonClient.auth.resetPasswordForEmail(buyerEmail, {
+                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://care-close.vercel.app'}/auth/set-password`,
             })
         }
 
