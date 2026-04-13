@@ -8,7 +8,7 @@ import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
 import { scheduleMedNotifications, registerServiceWorker } from '@/lib/push-notifications'
 import {
     IconHome, IconPill, IconRoutine, IconBarChart,
-    IconCalendar, IconCheckCircle, IconClock, IconSkip, IconXCircle, IconX, IconBell
+    IconCalendar, IconCheckCircle, IconClock, IconSkip, IconXCircle, IconX, IconBell, IconCamera
 } from '@/components/Icons'
 
 interface MedSchedule {
@@ -35,6 +35,8 @@ export default function PatientHomePage() {
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState<MedSchedule | null>(null)
     const [confirmingDose, setConfirmingDose] = useState(false)
+    const [proofFile, setProofFile] = useState<File | null>(null)
+    const [uploadProgress, setUploadProgress] = useState(0)
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [showNotifications, setShowNotifications] = useState(false)
 
@@ -102,19 +104,44 @@ export default function PatientHomePage() {
 
     async function confirmDose(schedule: MedSchedule) {
         setConfirmingDose(true)
+        setUploadProgress(10)
+        let uploadedUrl: string | null = null
+
+        if (proofFile) {
+            setUploadProgress(30)
+            const fileExt = proofFile.name.split('.').pop()
+            const fileName = `${schedule.id}-${Date.now()}.${fileExt}`
+            const { data: patient } = await supabase.from('patients').select('id').eq('user_id', user!.id).maybeSingle()
+            const filePath = `${patient?.id ?? user!.id}/${fileName}`
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('proofs').upload(filePath, proofFile, { upsert: true })
+            setUploadProgress(70)
+            if (!uploadError && uploadData) {
+                const { data: pub } = supabase.storage.from('proofs').getPublicUrl(filePath)
+                uploadedUrl = pub.publicUrl
+            }
+        }
+
+        setUploadProgress(85)
         await supabase.from('medication_schedules').update({
             status: 'taken',
             taken_at: new Date().toISOString(),
             taken_by: user!.id,
+            proof_url: uploadedUrl,
         }).eq('id', schedule.id)
         if (schedule.medication.stock_quantity > 0) {
             await supabase.from('medications')
                 .update({ stock_quantity: schedule.medication.stock_quantity - 1 })
                 .eq('id', schedule.medication.id)
         }
-        setShowModal(null)
-        setConfirmingDose(false)
-        loadSchedules()
+        setUploadProgress(100)
+        setTimeout(() => {
+            setShowModal(null)
+            setConfirmingDose(false)
+            setProofFile(null)
+            setUploadProgress(0)
+            loadSchedules()
+        }, 300)
     }
 
     function formatTime(iso: string) {
@@ -365,6 +392,34 @@ export default function PatientHomePage() {
                                 </p>
                             )}
                         </div>
+                        {/* Proof photo (optional) */}
+                        <div className="mb-4">
+                            <p className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <IconCamera size={15} color="#374151" /> Comprovante <span className="font-medium text-gray-400 text-xs">(opcional)</span>
+                            </p>
+                            <label className={`flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-2xl cursor-pointer transition-all
+                                ${proofFile ? 'border-[#42b6f0] bg-[#f0f8ff]' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'}`}>
+                                {proofFile ? (
+                                    <p className="text-xs font-bold text-[#42b6f0] px-4 text-center truncate w-full">{proofFile.name}</p>
+                                ) : (
+                                    <>
+                                        <IconCamera size={22} color="#94a3b8" />
+                                        <p className="text-xs text-gray-400 mt-1">Foto ou vídeo da medicação</p>
+                                    </>
+                                )}
+                                <input type="file" className="hidden" accept="image/*,video/*" capture="environment"
+                                    onChange={e => { if (e.target.files?.[0]) setProofFile(e.target.files[0]) }} />
+                            </label>
+                        </div>
+
+                        {confirmingDose && uploadProgress > 0 && (
+                            <div className="mb-3">
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%`, background: 'linear-gradient(135deg,#42b6f0,#7bc843)' }} />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex flex-col gap-2">
                             <button
                                 onClick={() => confirmDose(showModal)}
@@ -376,7 +431,7 @@ export default function PatientHomePage() {
                                     ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                     : <><IconCheckCircle size={18} color="white" /> Confirmar que tomei</>}
                             </button>
-                            <button onClick={() => setShowModal(null)} disabled={confirmingDose}
+                            <button onClick={() => { setShowModal(null); setProofFile(null) }} disabled={confirmingDose}
                                 className="w-full py-3.5 rounded-2xl border-2 border-gray-100 text-sm font-bold text-gray-400 hover:bg-gray-50 transition-colors">
                                 Cancelar
                             </button>

@@ -224,7 +224,7 @@ function RoutineContent() {
                                 key={i}
                                 onClick={() => setWaterGlasses(w => w === i + 1 ? i : i + 1)}
                                 className="p-1 active:scale-90 transition-transform hover:opacity-80 disabled:opacity-50"
-                                disabled={profile?.role === 'caregiver'}
+                                disabled={false}
                             >
                                 <CupIcon filled={waterGlasses > i} />
                             </button>
@@ -247,7 +247,7 @@ function RoutineContent() {
                     <input
                         type="range" min="0" max="120" step="5"
                         value={walkDuration} onChange={e => setWalkDuration(parseInt(e.target.value))}
-                        disabled={profile?.role === 'caregiver'}
+                        disabled={false}
                         className="w-full h-4 bg-gray-100 rounded-full appearance-none outline-none cursor-pointer"
                         style={{
                             background: `linear-gradient(to right, #34d399 ${(walkDuration / 120) * 100}%, #f3f4f6 ${(walkDuration / 120) * 100}%)`,
@@ -286,21 +286,21 @@ function RoutineContent() {
 
                     <div className="flex w-full gap-2 mb-6">
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setExerciseIntensity('leve')}
                             className={`flex-1 flex flex-col items-center py-3 rounded-2xl border-2 transition-colors disabled:opacity-50 ${exerciseIntensity === 'leve' ? 'bg-green-50 border-green-400 text-green-700' : 'border-gray-50 bg-gray-50/50 text-gray-400'}`}>
                             <BarsIcon level={1} />
                             <span className="font-bold text-xs mt-1">Leve</span>
                         </button>
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setExerciseIntensity('moderado')}
                             className={`flex-1 flex flex-col items-center py-3 rounded-2xl border-2 transition-colors disabled:opacity-50 ${exerciseIntensity === 'moderado' ? 'bg-amber-50 border-amber-400 text-amber-700' : 'border-gray-50 bg-gray-50/50 text-gray-400'}`}>
                             <BarsIcon level={2} />
                             <span className="font-bold text-xs mt-1">Médio</span>
                         </button>
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setExerciseIntensity('intenso')}
                             className={`flex-1 flex flex-col items-center py-3 rounded-2xl border-2 transition-colors disabled:opacity-50 ${exerciseIntensity === 'intenso' ? 'bg-red-50 border-red-400 text-red-700' : 'border-gray-50 bg-gray-50/50 text-gray-400'}`}>
                             <BarsIcon level={3} />
@@ -313,7 +313,7 @@ function RoutineContent() {
                     <h4 className="text-gray-400 font-bold text-xs uppercase tracking-wide mb-3 self-start">Duração</h4>
                     <div className="flex items-center gap-6">
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setExerciseDuration(Math.max(0, exerciseDuration - 5))}
                             className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
                         >
@@ -321,7 +321,7 @@ function RoutineContent() {
                         </button>
                         <span className="text-3xl font-black text-gray-900 w-16 text-center">{exerciseDuration}</span>
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setExerciseDuration(Math.min(180, exerciseDuration + 5))}
                             className="w-12 h-12 rounded-full bg-[#f97316] shadow-md shadow-orange-200 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
                         >
@@ -341,7 +341,7 @@ function RoutineContent() {
 
                     <div className="flex w-full gap-2.5">
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setFoodQuality('vermelho')}
                             className={`flex-1 py-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50 ${foodQuality === 'vermelho' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-50 bg-gray-50/50 text-gray-300'}`}>
                             <SadFace />
@@ -349,7 +349,7 @@ function RoutineContent() {
                         </button>
 
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setFoodQuality('amarelo')}
                             className={`flex-1 py-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50 ${foodQuality === 'amarelo' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-50 bg-gray-50/50 text-gray-300'}`}>
                             <NeutralFace />
@@ -357,7 +357,7 @@ function RoutineContent() {
                         </button>
 
                         <button
-                            disabled={profile?.role === 'caregiver'}
+                            disabled={false}
                             onClick={() => setFoodQuality('verde')}
                             className={`flex-1 py-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50 ${foodQuality === 'verde' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-50 bg-gray-50/50 text-gray-300'}`}>
                             <HappyFace />
@@ -375,7 +375,7 @@ function RoutineContent() {
                         placeholder="Adicione notas sobre humor, dor ou outros sintomas aqui..."
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
-                        disabled={profile?.role === 'caregiver'}
+                        disabled={false}
                     />
                 </div>
 
@@ -386,9 +386,7 @@ function RoutineContent() {
                     className={`w-full flex items-center justify-center gap-2 py-4 mt-2 rounded-3xl font-extrabold text-white transition-all shadow-lg
                         ${saved
                             ? 'bg-[#4ade80] shadow-green-100'
-                            : profile?.role === 'caregiver'
-                                ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                                : 'bg-[#f87171] hover:bg-[#ef4444] shadow-red-100 active:scale-[0.98]'}`}
+                            : 'bg-[#f87171] hover:bg-[#ef4444] shadow-red-100 active:scale-[0.98]'}`}
                 >
                     {saving ? (
                         <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -396,7 +394,7 @@ function RoutineContent() {
                         <><svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> Salvo!</>
                     ) : (
                         <><svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                            {profile?.role === 'caregiver' ? 'Apenas Visualização' : 'Salvar Dia'}</>
+                            Salvar Dia</>
                     )}
                 </button>
             </div>
