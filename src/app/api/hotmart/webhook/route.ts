@@ -148,14 +148,7 @@ export async function POST(request: NextRequest) {
             }, { onConflict: 'user_id' })
         }
 
-        // Send password reset email so new user can set their password
-        if (isNewUser) {
-            await supabase.auth.admin.generateLink({
-                type: 'magiclink',
-                email: buyerEmail,
-            })
-        }
-
+        // Account created — customer will log in via /auth/post-purchase (Hotmart Thank You Page)
         return NextResponse.json({
             success: true,
             license_id: license.id,
