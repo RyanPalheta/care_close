@@ -172,7 +172,7 @@ export default function CaregiverHomePage() {
                     </div>
 
                     {/* Summary */}
-                    <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 flex justify-around">
+                    <div data-onboarding="caregiver-summary" className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 flex justify-around">
                         <div className="text-center">
                             <p className="text-2xl font-bold">{totalPatients}</p>
                             <p className="text-xs text-violet-200">Pacientes</p>
@@ -193,7 +193,7 @@ export default function CaregiverHomePage() {
 
             <div className="px-4 -mt-5 relative z-10">
                 {/* Add patient button */}
-                <Link href="/patient/add" className="btn-primary mb-6 block text-center shadow-lg transition-all hover:brightness-125 hover:shadow-xl" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                <Link data-onboarding="caregiver-add-patient" href="/patient/add" className="btn-primary mb-6 block text-center shadow-lg transition-all hover:brightness-125 hover:shadow-xl" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
                     + Adicionar Paciente
                 </Link>
 

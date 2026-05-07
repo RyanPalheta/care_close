@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { IconHome, IconCalendar, IconBarChart, IconSettings, IconLogout, IconBell, IconUsers, IconCamera } from '@/components/Icons'
 import { useRouter } from 'next/navigation'
+import { useCallback } from 'react'
 import { useRef, useState, useEffect } from 'react'
 
 export default function CaregiverSettingsPage() {
@@ -17,6 +18,12 @@ export default function CaregiverSettingsPage() {
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+    const handleStartTour = useCallback(() => {
+        localStorage.removeItem('cc_caregiver_onboarding_done')
+        window.dispatchEvent(new CustomEvent('cc-start-caregiver-tour'))
+        router.push('/caregiver/home')
+    }, [router])
 
     useEffect(() => {
         if (!user) return
@@ -178,19 +185,37 @@ export default function CaregiverSettingsPage() {
                 {/* App */}
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-4">
                     <p className="text-[13px] font-extrabold text-gray-400 uppercase tracking-wide px-5 pt-5 pb-3">Aplicativo</p>
-                    <Link href="/caregiver/notifications" className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <Link data-onboarding="caregiver-notifications-link" href="/caregiver/notifications" className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center"><IconBell size={18} color="#f87171" /></div>
                             <p className="font-bold text-gray-800 text-sm">Notificacoes</p>
                         </div>
                         <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </Link>
-                    <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
+                    <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors border-b border-gray-50">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center">
                                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.94 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.88 3.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 10a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                             </div>
                             <p className="font-bold text-gray-800 text-sm">Ajuda e Suporte</p>
+                        </div>
+                        <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                    <button
+                        onClick={handleStartTour}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-amber-50 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+                                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 16v-4M12 8h.01" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-800 text-sm">Instruções</p>
+                                <p className="text-xs text-gray-400">Como usar o Care Close</p>
+                            </div>
                         </div>
                         <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </button>

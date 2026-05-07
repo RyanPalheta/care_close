@@ -173,7 +173,7 @@ export default function CaregiverSchedulePage() {
 
             <div className="px-4 pt-4 flex flex-col gap-5">
                 {/* Progress Summary Card */}
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                <div data-onboarding="caregiver-schedule-progress" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-sm font-medium text-gray-500">Aderência hoje</p>

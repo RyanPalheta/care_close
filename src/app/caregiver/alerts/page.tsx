@@ -184,7 +184,7 @@ export default function CaregiverAlertsPage() {
 
             <div className="px-4 -mt-4 relative z-10">
                 {/* Filter tabs */}
-                <div className="bg-white rounded-2xl p-1.5 flex gap-1 shadow-sm border border-gray-100 mb-4">
+                <div data-onboarding="caregiver-alerts-filter" className="bg-white rounded-2xl p-1.5 flex gap-1 shadow-sm border border-gray-100 mb-4">
                     {([
                         { key: 'today', label: 'Hoje' },
                         { key: 'week', label: '7 dias' },
