@@ -149,7 +149,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Send password setup email to new user
-        // Uses Supabase's built-in email (template customizable in dashboard)
         if (isNewUser) {
             const anonClient = createClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -159,6 +158,7 @@ export async function POST(request: NextRequest) {
                 redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://care-close.vercel.app'}/auth/set-password`,
             })
         }
+
 
         return NextResponse.json({
             success: true,

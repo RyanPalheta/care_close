@@ -31,27 +31,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                setUser(session.user)
-                fetchProfile(session.user.id)
-            } else {
+        // Get initial session — catch stale/invalid refresh tokens (e.g. after Supabase project pause)
+        supabase.auth.getSession()
+            .then(({ data: { session }, error }) => {
+                if (error) {
+                    // Invalid/expired token — clear it so the user sees a clean login screen
+                    supabase.auth.signOut()
+                    setUser(null)
+                    setLoading(false)
+                    return
+                }
+                if (session?.user) {
+                    setUser(session.user)
+                    fetchProfile(session.user.id)
+                } else {
+                    setUser(null)
+                    setLoading(false)
+                }
+            })
+            .catch(() => {
+                supabase.auth.signOut()
                 setUser(null)
                 setLoading(false)
-            }
-        })
+            })
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'TOKEN_REFRESHED' && !session) {
+                // Refresh failed — clear stale token
+                supabase.auth.signOut()
+                setUser(null)
+                setProfile(null)
+                setLoading(false)
+                return
+            }
             if (session?.user) {
-                // If we just logged in, user state changes but profile needs to be fetched
-                // Set loading to true so we don't abort early in auth/page.tsx
                 setLoading(true)
                 setUser(session.user)
                 fetchProfile(session.user.id)
-            }
-            else {
+            } else {
                 setUser(null)
                 setProfile(null)
                 setLoading(false)
