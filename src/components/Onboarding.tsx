@@ -166,6 +166,8 @@ export default function OnboardingTour() {
         localStorage.setItem('cc_onboarding_done', '1')
         setActive(false)
         setRect(null)
+        // Trigger install prompt after tour completes
+        setTimeout(() => window.dispatchEvent(new CustomEvent('cc-show-install')), 600)
     }
 
     if (!active) return null
