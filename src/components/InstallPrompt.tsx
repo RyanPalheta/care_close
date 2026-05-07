@@ -15,14 +15,23 @@ export default function InstallPrompt() {
     const [installing, setInstalling] = useState(false)
 
     useEffect(() => {
+        const dismissed = !!localStorage.getItem(STORAGE_KEY)
+
         // Capture the browser install prompt before it auto-fires
         const handler = (e: Event) => {
             e.preventDefault()
             deferredPrompt.current = e as BeforeInstallPromptEvent
+
+            // Existing users (tour already done): show prompt automatically after 3s
+            if (!dismissed && localStorage.getItem('cc_onboarding_done')) {
+                setTimeout(() => {
+                    if (deferredPrompt.current) setVisible(true)
+                }, 3000)
+            }
         }
         window.addEventListener('beforeinstallprompt', handler)
 
-        // Listen for signal from onboarding tour
+        // New users: triggered by onboarding tour completing
         const showHandler = () => {
             if (deferredPrompt.current && !localStorage.getItem(STORAGE_KEY)) {
                 setVisible(true)
