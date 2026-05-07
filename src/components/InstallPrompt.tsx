@@ -16,32 +16,42 @@ export default function InstallPrompt() {
 
     useEffect(() => {
         const dismissed = !!localStorage.getItem(STORAGE_KEY)
+        if (dismissed) return
 
-        // Capture the browser install prompt before it auto-fires
+        function tryShow() {
+            // Read prompt captured by inline script in <head> before React mounted
+            const early = (window as any).__deferredInstallPrompt as BeforeInstallPromptEvent | undefined
+            if (early) {
+                deferredPrompt.current = early
+                delete (window as any).__deferredInstallPrompt
+            }
+            if (deferredPrompt.current) setVisible(true)
+        }
+
+        // If the event already fired (captured early), show after 3s for existing users
+        // or wait for cc-show-install from the tour for new users
+        const onTourDone = () => tryShow()
+        window.addEventListener('cc-show-install', onTourDone)
+
+        // Existing users (tour already completed): show 3s after page load
+        if (localStorage.getItem('cc_onboarding_done')) {
+            const t = setTimeout(tryShow, 3000)
+            return () => {
+                clearTimeout(t)
+                window.removeEventListener('cc-show-install', onTourDone)
+            }
+        }
+
+        // Also listen in case the event fires after mount
         const handler = (e: Event) => {
             e.preventDefault()
             deferredPrompt.current = e as BeforeInstallPromptEvent
-
-            // Existing users (tour already done): show prompt automatically after 3s
-            if (!dismissed && localStorage.getItem('cc_onboarding_done')) {
-                setTimeout(() => {
-                    if (deferredPrompt.current) setVisible(true)
-                }, 3000)
-            }
         }
         window.addEventListener('beforeinstallprompt', handler)
 
-        // New users: triggered by onboarding tour completing
-        const showHandler = () => {
-            if (deferredPrompt.current && !localStorage.getItem(STORAGE_KEY)) {
-                setVisible(true)
-            }
-        }
-        window.addEventListener('cc-show-install', showHandler)
-
         return () => {
             window.removeEventListener('beforeinstallprompt', handler)
-            window.removeEventListener('cc-show-install', showHandler)
+            window.removeEventListener('cc-show-install', onTourDone)
         }
     }, [])
 
