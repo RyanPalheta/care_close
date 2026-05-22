@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/send-med-notifications",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
-import { scheduleMedNotifications, registerServiceWorker } from '@/lib/push-notifications'
+import { registerServiceWorker } from '@/lib/push-notifications'
 import {
     IconHome, IconPill, IconRoutine, IconBarChart,
     IconCalendar, IconCheckCircle, IconClock, IconSkip, IconXCircle, IconX, IconBell, IconCamera
@@ -74,21 +74,8 @@ export default function PatientHomePage() {
         setSchedules((data as unknown as MedSchedule[]) ?? [])
         setLoading(false)
 
-        // Schedule local push notifications for pending meds (respecting user preferences)
-        try {
-            const prefsStr = localStorage.getItem('cc_notif_prefs')
-            const notifPrefs = prefsStr ? JSON.parse(prefsStr) : null
-            const medReminders = notifPrefs?.medReminders ?? true
-            const leadMin = notifPrefs?.medLeadMinutes ?? parseInt(localStorage.getItem('cc_notif_lead_minutes') || '5')
-
-            if (medReminders) {
-                const pending = (data as unknown as MedSchedule[])?.filter(s => s.status === 'pending') ?? []
-                if (pending.length > 0) {
-                    registerServiceWorker()
-                    scheduleMedNotifications(pending as any, leadMin)
-                }
-            }
-        } catch { /* ignore prefs errors */ }
+        // Ensure SW is registered — actual push scheduling is server-driven via cron
+        registerServiceWorker()
     }, [user])
 
     useEffect(() => {

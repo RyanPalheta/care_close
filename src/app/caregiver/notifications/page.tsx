@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { registerServiceWorker } from '@/lib/push-notifications'
+import { enablePushNotifications, updatePushLeadMinutes, showTestNotification } from '@/lib/push-notifications'
 
 export default function CaregiverNotificationsPage() {
     const { user } = useAuth()
@@ -27,15 +27,13 @@ export default function CaregiverNotificationsPage() {
 
     async function enableNotifications() {
         setLoading(true)
-        try {
-            const permission = await Notification.requestPermission()
-            setPermissionState(permission === 'granted' ? 'granted' : permission === 'denied' ? 'denied' : 'prompt')
-
-            if (permission === 'granted') {
-                await registerServiceWorker()
-            }
-        } catch {
-            // ignore errors
+        const result = await enablePushNotifications(leadMinutes)
+        if (result.ok) {
+            setPermissionState('granted')
+        } else if (result.reason === 'permission-denied') {
+            setPermissionState('denied')
+        } else {
+            alert('Não foi possível ativar as notificações: ' + (result.reason || 'erro'))
         }
         setLoading(false)
     }
@@ -43,33 +41,13 @@ export default function CaregiverNotificationsPage() {
     function updateLeadMinutes(value: number) {
         setLeadMinutes(value)
         localStorage.setItem('cc_notif_lead_minutes', value.toString())
+        if (Notification.permission === 'granted') {
+            updatePushLeadMinutes(value)
+        }
     }
 
     async function sendTestNotification() {
-        if (Notification.permission !== 'granted') return
-
-        // Try Service Worker first, fallback to Notification API
-        try {
-            if ('serviceWorker' in navigator) {
-                const reg = await navigator.serviceWorker.ready
-                await reg.showNotification('Care Close - Teste', {
-                    body: 'As notificacoes estao funcionando! Voce recebera lembretes de medicacao.',
-                    icon: '/icon-192.png',
-                    tag: 'test-notification',
-                } as NotificationOptions)
-            } else {
-                new Notification('Care Close - Teste', {
-                    body: 'As notificacoes estao funcionando! Voce recebera lembretes de medicacao.',
-                    icon: '/icon-192.png',
-                    tag: 'test-notification',
-                })
-            }
-        } catch {
-            // Last resort fallback
-            new Notification('Care Close - Teste', {
-                body: 'As notificacoes estao funcionando!',
-            })
-        }
+        await showTestNotification()
     }
 
     return (

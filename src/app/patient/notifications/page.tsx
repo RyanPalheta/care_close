@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { registerServiceWorker } from '@/lib/push-notifications'
+import { enablePushNotifications, disablePushNotifications, updatePushLeadMinutes, showTestNotification } from '@/lib/push-notifications'
 
 interface NotifPrefs {
     medReminders: boolean
@@ -63,40 +63,27 @@ export default function PatientNotificationsPage() {
         const updated = { ...prefs, [key]: value }
         setPrefs(updated)
         savePrefs(updated)
+        // Sync lead time to server-side subscription
+        if (key === 'medLeadMinutes' && Notification.permission === 'granted') {
+            updatePushLeadMinutes(value as number)
+        }
     }
 
     async function enableNotifications() {
         setLoading(true)
-        try {
-            const permission = await Notification.requestPermission()
-            setPermissionState(permission === 'granted' ? 'granted' : permission === 'denied' ? 'denied' : 'prompt')
-            if (permission === 'granted') {
-                await registerServiceWorker()
-            }
-        } catch { /* ignore */ }
+        const result = await enablePushNotifications(prefs.medLeadMinutes)
+        if (result.ok) {
+            setPermissionState('granted')
+        } else if (result.reason === 'permission-denied') {
+            setPermissionState('denied')
+        } else {
+            alert('Não foi possível ativar as notificações: ' + (result.reason || 'erro desconhecido'))
+        }
         setLoading(false)
     }
 
     async function sendTestNotification() {
-        if (Notification.permission !== 'granted') return
-        try {
-            if ('serviceWorker' in navigator) {
-                const reg = await navigator.serviceWorker.ready
-                await reg.showNotification('Care Close - Teste', {
-                    body: 'As notificacoes estao funcionando!',
-                    icon: '/icon-192.png',
-                    tag: 'test-notification',
-                } as NotificationOptions)
-            } else {
-                new Notification('Care Close - Teste', {
-                    body: 'As notificacoes estao funcionando!',
-                })
-            }
-        } catch {
-            new Notification('Care Close - Teste', {
-                body: 'As notificacoes estao funcionando!',
-            })
-        }
+        await showTestNotification()
     }
 
     const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (

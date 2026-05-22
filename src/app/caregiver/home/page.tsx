@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
-import { registerServiceWorker, scheduleMedNotifications } from '@/lib/push-notifications'
+import { registerServiceWorker } from '@/lib/push-notifications'
 import { IconHome, IconCalendar, IconBarChart, IconSettings, IconClock, IconCheckCircle, IconXCircle, IconPill, IconPlus } from '@/components/Icons'
 
 interface PatientWithStats {
@@ -108,28 +108,8 @@ export default function CaregiverHomePage() {
         setPatients(enriched)
         setLoading(false)
 
-        // Schedule push notifications for all pending meds across all patients
-        const allPending: any[] = []
-        for (const patient of patientsData) {
-            const { data: pendingScheds } = await supabase
-                .from('medication_schedules')
-                .select('id, scheduled_time, status, medication:medications!medication_id (name, dosage, unit)')
-                .eq('patient_id', patient.id)
-                .eq('status', 'pending')
-                .gte('scheduled_time', startOfDay)
-                .lt('scheduled_time', endOfDay)
-
-            if (pendingScheds) {
-                allPending.push(...pendingScheds.map(s => ({
-                    ...s,
-                    medication: { ...(s as any).medication, name: `${(s as any).medication.name} (${patient.name})` },
-                })))
-            }
-        }
-        if (allPending.length > 0) {
-            registerServiceWorker()
-            scheduleMedNotifications(allPending, 5)
-        }
+        // Ensure SW is registered — actual push scheduling is server-driven via cron
+        registerServiceWorker()
     }, [user])
 
     useEffect(() => {
