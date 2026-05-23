@@ -22,7 +22,15 @@ export default function CaregiverNotificationsPage() {
 
         // Load saved preference
         const saved = localStorage.getItem('cc_notif_lead_minutes')
-        if (saved) setLeadMinutes(parseInt(saved))
+        const lead = saved ? parseInt(saved) : 5
+        if (saved) setLeadMinutes(lead)
+
+        // Auto-sync: if permission already granted, ensure server subscription exists
+        if (perm === 'granted') {
+            enablePushNotifications(lead).then(r => {
+                if (!r.ok) console.warn('Auto-resubscribe failed:', r.reason)
+            })
+        }
     }, [])
 
     async function enableNotifications() {

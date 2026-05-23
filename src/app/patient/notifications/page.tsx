@@ -56,7 +56,15 @@ export default function PatientNotificationsPage() {
         }
         const perm = Notification.permission
         setPermissionState(perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'prompt')
-        setPrefs(loadPrefs())
+        const loaded = loadPrefs()
+        setPrefs(loaded)
+
+        // Auto-sync: if permission already granted, ensure server subscription exists
+        if (perm === 'granted') {
+            enablePushNotifications(loaded.medLeadMinutes).then(r => {
+                if (!r.ok) console.warn('Auto-resubscribe failed:', r.reason)
+            })
+        }
     }, [])
 
     function updatePref<K extends keyof NotifPrefs>(key: K, value: NotifPrefs[K]) {
