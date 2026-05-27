@@ -116,8 +116,21 @@ export default function EditMedicationPage() {
 
     async function handleDelete() {
         if (!confirm('Tem certeza que deseja excluir este medicamento?')) return
-        await supabase.from('medication_schedules').delete().eq('medication_id', medId)
-        await supabase.from('medications').delete().eq('id', medId)
+
+        const { error: schedErr } = await supabase
+            .from('medication_schedules').delete().eq('medication_id', medId)
+        if (schedErr) {
+            setError(`Erro ao remover agendamentos: ${schedErr.message}`)
+            return
+        }
+
+        const { error: medErr } = await supabase
+            .from('medications').delete().eq('id', medId)
+        if (medErr) {
+            setError(`Erro ao excluir medicamento: ${medErr.message}`)
+            return
+        }
+
         router.push('/patient/medications')
     }
 

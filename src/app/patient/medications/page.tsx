@@ -211,8 +211,23 @@ export default function MedicationsPage() {
     async function handleDelete(medId: string, medName: string) {
         if (!confirm(`Excluir "${medName}"? Isso também remove os agendamentos futuros.`)) return
         setDeletingId(medId)
-        await supabase.from('medication_schedules').delete().eq('medication_id', medId)
-        await supabase.from('medications').delete().eq('id', medId)
+
+        const { error: schedErr } = await supabase
+            .from('medication_schedules').delete().eq('medication_id', medId)
+        if (schedErr) {
+            alert(`Erro ao remover agendamentos: ${schedErr.message}`)
+            setDeletingId(null)
+            return
+        }
+
+        const { error: medErr } = await supabase
+            .from('medications').delete().eq('id', medId)
+        if (medErr) {
+            alert(`Erro ao excluir remédio: ${medErr.message}`)
+            setDeletingId(null)
+            return
+        }
+
         setMedications(prev => prev.filter(m => m.id !== medId))
         setDeletingId(null)
     }
