@@ -12,6 +12,7 @@ function AuthForm() {
 
     // Read mode from URL: ?mode=login → show login, ?mode=signup or missing → show signup
     const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup')
+    const [isForgot, setIsForgot] = useState(false)
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -89,6 +90,34 @@ function AuthForm() {
         } else {
             window.location.href = '/patient/home'
         }
+    }
+
+    async function handleForgotPassword(e: React.FormEvent) {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        setMessage(null)
+
+        if (!email.trim()) {
+            setLoading(false)
+            setError('Por favor, informe seu email.')
+            return
+        }
+
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth/reset-password`,
+        })
+
+        setLoading(false)
+
+        if (resetErr) {
+            console.error('Reset password error:', resetErr)
+            setError('Erro ao enviar email de recuperação. Tente novamente.')
+            return
+        }
+
+        // Generic message — don't leak whether email exists
+        setMessage('Se o email estiver cadastrado, enviamos um link para redefinir sua senha. Verifique sua caixa de entrada.')
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -187,10 +216,12 @@ function AuthForm() {
                     Voltar
                 </button>
                 <h1 className="text-3xl font-black text-gray-900 mb-1">
-                    Bem-vindo{'\n'}de volta!
+                    {isForgot ? 'Recuperar\nsenha' : 'Bem-vindo\nde volta!'}
                 </h1>
                 <p className="text-sm text-gray-400 mt-2">
-                    Acesse sua plataforma de cuidados
+                    {isForgot
+                        ? 'Informe seu email para receber o link de recuperação'
+                        : 'Acesse sua plataforma de cuidados'}
                 </p>
             </div>
 
@@ -262,7 +293,7 @@ function AuthForm() {
                     </form>
                 ) : (
                 <>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={isForgot ? handleForgotPassword : handleSubmit} className="flex flex-col gap-4">
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-2xl px-4 py-3">
                             {error}
@@ -274,7 +305,7 @@ function AuthForm() {
                         </div>
                     )}
 
-                    {!isLogin && (
+                    {!isLogin && !isForgot && (
                         <div>
                             <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Nome completo</label>
                             <input
@@ -302,21 +333,23 @@ function AuthForm() {
                         />
                     </div>
 
-                    <div>
-                        <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Senha</label>
-                        <input
-                            type="password"
-                            className="input-field"
-                            placeholder={isLogin ? '••••••••' : 'Mínimo 6 caracteres'}
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            required
-                            minLength={6}
-                            autoComplete={isLogin ? 'current-password' : 'new-password'}
-                        />
-                    </div>
+                    {!isForgot && (
+                        <div>
+                            <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Senha</label>
+                            <input
+                                type="password"
+                                className="input-field"
+                                placeholder={isLogin ? '••••••••' : 'Mínimo 6 caracteres'}
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                required
+                                minLength={6}
+                                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                            />
+                        </div>
+                    )}
 
-                    {!isLogin && (
+                    {!isLogin && !isForgot && (
                         <div>
                             <label className="text-sm font-semibold text-gray-700 mb-2 block">Sou um...</label>
                             <div className="flex gap-3">
@@ -348,9 +381,38 @@ function AuthForm() {
                     >
                         {loading
                             ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto block" />
-                            : 'Entrar'
+                            : isForgot ? 'Enviar link de recuperação' : 'Entrar'
                         }
                     </button>
+
+                    {isLogin && !isForgot && (
+                        <button
+                            type="button"
+                            className="text-sm text-[#42b6f0] font-semibold mt-1 hover:underline"
+                            onClick={() => {
+                                setIsForgot(true)
+                                setError(null)
+                                setMessage(null)
+                                setPassword('')
+                            }}
+                        >
+                            Esqueci minha senha
+                        </button>
+                    )}
+
+                    {isForgot && (
+                        <button
+                            type="button"
+                            className="text-sm text-gray-500 mt-1 hover:underline"
+                            onClick={() => {
+                                setIsForgot(false)
+                                setError(null)
+                                setMessage(null)
+                            }}
+                        >
+                            Voltar para login
+                        </button>
+                    )}
                 </form>
 
                 <div className="pb-8" />
