@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { endpoint, keys, leadMinutes } = body
+        const { endpoint, keys, leadMinutes, timezone } = body
 
         if (!endpoint || !keys?.p256dh || !keys?.auth) {
             return NextResponse.json({ error: 'Missing subscription fields' }, { status: 400 })
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
                 p256dh: keys.p256dh,
                 auth: keys.auth,
                 lead_minutes: typeof leadMinutes === 'number' ? leadMinutes : 5,
+                timezone: typeof timezone === 'string' && timezone.length > 0 ? timezone : 'America/Sao_Paulo',
                 user_agent: request.headers.get('user-agent') || null,
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'endpoint' })

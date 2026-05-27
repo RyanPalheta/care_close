@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
@@ -31,6 +32,7 @@ interface MedSchedule {
 
 export default function PatientHomePage() {
     const { user, profile, loading: authLoading } = useAuth()
+    const router = useRouter()
     const [schedules, setSchedules] = useState<MedSchedule[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState<MedSchedule | null>(null)
@@ -82,6 +84,23 @@ export default function PatientHomePage() {
         if (!authLoading && user) loadSchedules()
         else if (!authLoading) setLoading(false)
     }, [authLoading, user, loadSchedules])
+
+    // Handle ?confirm=<scheduleId> from push notification action (read from window to avoid Suspense)
+    useEffect(() => {
+        if (typeof window === 'undefined' || schedules.length === 0) return
+        const confirmId = new URLSearchParams(window.location.search).get('confirm')
+        if (!confirmId) return
+        const target = schedules.find(s => s.id === confirmId)
+        if (!target) return
+        if (target.status === 'taken') {
+            router.replace('/patient/home')
+            return
+        }
+        confirmDose(target).then(() => {
+            router.replace('/patient/home')
+        })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [schedules])
 
 
     const takenCount = schedules.filter(s => s.status === 'taken').length

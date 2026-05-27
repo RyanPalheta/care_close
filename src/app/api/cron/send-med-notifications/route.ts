@@ -57,7 +57,7 @@ async function handle(request: NextRequest) {
     // 1. Get all push subscriptions
     const { data: subs, error: subsErr } = await admin
         .from('push_subscriptions')
-        .select('id, user_id, endpoint, p256dh, auth, lead_minutes')
+        .select('id, user_id, endpoint, p256dh, auth, lead_minutes, timezone')
 
     if (subsErr) {
         console.error('Failed to fetch subs:', subsErr)
@@ -141,22 +141,31 @@ async function handle(request: NextRequest) {
         for (const sched of dueScheds as any[]) {
             const med = sched.medication
             const patient = sched.patient
-            const time = new Date(sched.scheduled_time).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-            })
-
-            const payload = JSON.stringify({
-                title: `💊 ${med?.name || 'Medicamento'}`,
-                body: patient?.name
-                    ? `${patient.name} — ${med?.dosage || ''} ${med?.unit || ''} às ${time}`
-                    : `${med?.dosage || ''} ${med?.unit || ''} às ${time}`,
-                tag: `med-${sched.id}`,
-                url: '/patient/home',
-                scheduleId: sched.id,
-            })
 
             for (const sub of userSubs) {
+                // Format time in this device's timezone
+                const tz = sub.timezone || 'America/Sao_Paulo'
+                let time: string
+                try {
+                    time = new Intl.DateTimeFormat('pt-BR', {
+                        hour: '2-digit', minute: '2-digit', timeZone: tz,
+                    }).format(new Date(sched.scheduled_time))
+                } catch {
+                    time = new Date(sched.scheduled_time).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit', minute: '2-digit',
+                    })
+                }
+
+                const payload = JSON.stringify({
+                    title: `💊 ${med?.name || 'Medicamento'}`,
+                    body: patient?.name
+                        ? `${patient.name} — ${med?.dosage || ''} ${med?.unit || ''} às ${time}`
+                        : `${med?.dosage || ''} ${med?.unit || ''} às ${time}`,
+                    tag: `med-${sched.id}`,
+                    url: `/patient/home?confirm=${sched.id}`,
+                    scheduleId: sched.id,
+                })
+
                 try {
                     await webpush.sendNotification({
                         endpoint: sub.endpoint,

@@ -65,6 +65,12 @@ export async function enablePushNotifications(leadMinutes = 5): Promise<{ ok: bo
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return { ok: false, reason: 'no-session' }
 
+    let timezone = 'America/Sao_Paulo'
+    try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+        if (tz) timezone = tz
+    } catch { /* keep default */ }
+
     const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: {
@@ -75,6 +81,7 @@ export async function enablePushNotifications(leadMinutes = 5): Promise<{ ok: bo
             endpoint: json.endpoint,
             keys: json.keys,
             leadMinutes,
+            timezone,
         }),
     })
 
