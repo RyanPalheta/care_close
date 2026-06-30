@@ -76,12 +76,34 @@ function AuthForm() {
             return
         }
 
-        // If patient, also create patient entry (upsert to avoid duplicate)
+        // If patient, also create the patient record (only if one is missing)
         if (role === 'patient') {
-            await supabase.from('patients').upsert({
-                user_id: user.id,
-                license_id: null,
-            }, { onConflict: 'user_id' })
+            const { data: existing } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1)
+
+            if (!existing || existing.length === 0) {
+                const { data: lic } = await supabase
+                    .from('licenses')
+                    .select('id')
+                    .or(`owner_id.eq.${user.id},assigned_to.eq.${user.id}`)
+                    .eq('status', 'active')
+                    .maybeSingle()
+
+                const { error: patientErr } = await supabase.from('patients').insert({
+                    user_id: user.id,
+                    license_id: lic?.id ?? null,
+                    name: name.trim(),
+                })
+                if (patientErr) {
+                    console.error('Patient repair error:', patientErr)
+                    setError('Erro ao criar registro de paciente: ' + patientErr.message)
+                    setLoading(false)
+                    return
+                }
+            }
         }
 
         // Hard redirect to pick up the new profile
@@ -168,13 +190,28 @@ function AuthForm() {
                     return
                 }
 
-                // If patient role, create patient entry
+                // If patient role, create the patient record (this account *is* the patient).
+                // Link an existing active license if the user already has one (e.g. a purchase).
                 if (role === 'patient') {
+                    const { data: lic } = await supabase
+                        .from('licenses')
+                        .select('id')
+                        .or(`owner_id.eq.${data.user.id},assigned_to.eq.${data.user.id}`)
+                        .eq('status', 'active')
+                        .maybeSingle()
+
                     const { error: patientErr } = await supabase.from('patients').insert({
                         user_id: data.user.id,
-                        license_id: null,
+                        license_id: lic?.id ?? null,
+                        name: name.trim(),
                     })
-                    if (patientErr) console.error('Patient insert error:', patientErr)
+                    if (patientErr) {
+                        console.error('Patient insert error:', patientErr)
+                        setIsSigningUp(false)
+                        setLoading(false)
+                        setError('Conta criada, mas houve um erro ao iniciar seu cadastro de paciente. Faça login novamente para concluir seu perfil.')
+                        return
+                    }
                 }
             }
 
