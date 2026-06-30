@@ -139,13 +139,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create license', licenseError: JSON.stringify(licenseErr), userId, productId }, { status: 500 })
         }
 
-        // If patient license, create patient record
+        // If patient license, create patient record.
+        // Use a manual exists-check + insert instead of upsert(onConflict:'user_id')
+        // because that requires a UNIQUE constraint on user_id; if it's ever missing
+        // the upsert throws and the buyer silently ends up with no patient record.
         if (licenseConfig.type === 'paciente') {
-            await supabase.from('patients').upsert({
-                user_id: userId,
-                license_id: license.id,
-                name: buyerName || buyerEmail.split('@')[0],
-            }, { onConflict: 'user_id' })
+            const { data: existingPatient } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            if (!existingPatient) {
+                const { error: patientErr } = await supabase.from('patients').insert({
+                    user_id: userId,
+                    license_id: license.id,
+                    name: buyerName || buyerEmail.split('@')[0],
+                })
+                if (patientErr) {
+                    console.error('Failed to create patient record:', patientErr)
+                    return NextResponse.json({
+                        error: 'License created but patient record failed',
+                        patientError: patientErr.message,
+                        user_id: userId,
+                        license_id: license.id,
+                    }, { status: 500 })
+                }
+            }
         }
 
         // Send password setup email to new user

@@ -5,6 +5,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateDailySchedules } from '@/lib/schedule-generator'
+import { ensurePatientForUser } from '@/lib/ensure-patient'
 
 const UNITS = [
     { value: 'pílulas', label: 'Comprimido', icon: 'Pill' },
@@ -108,11 +109,16 @@ function AddMedicationForm() {
                 .select('id')
                 .eq('license_id', license.id)
                 .maybeSingle()
-            if (byLicense) setPatientId(byLicense.id)
+            if (byLicense) { setPatientId(byLicense.id); return }
         }
+
+        // Safety net: still no patient → auto-create it (covers buyers whose
+        // webhook-created patient record is missing).
+        const ensured = await ensurePatientForUser(user!.id, profile?.name)
+        if (ensured.patientId) setPatientId(ensured.patientId)
         }
         detectPatient()
-    }, [user, searchParams])
+    }, [user, searchParams, profile])
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()

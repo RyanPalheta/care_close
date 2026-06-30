@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
 import { registerServiceWorker } from '@/lib/push-notifications'
+import { ensurePatientForUser } from '@/lib/ensure-patient'
 import {
     IconHome, IconPill, IconRoutine, IconBarChart,
     IconCalendar, IconCheckCircle, IconClock, IconSkip, IconXCircle, IconX, IconBell, IconCamera
@@ -46,11 +47,25 @@ export default function PatientHomePage() {
         if (!user) return
 
         // Find patient linked to this user
-        const { data: patient } = await supabase
+        let { data: patient } = await supabase
             .from('patients')
             .select('id, avatar_url')
             .eq('user_id', user.id)
             .maybeSingle()
+
+        // Safety net: if the patient record is missing (e.g. webhook failed to
+        // create it on purchase), auto-create it from the user's active license.
+        if (!patient) {
+            const ensured = await ensurePatientForUser(user.id, profile?.name)
+            if (ensured.patientId) {
+                const { data: refetched } = await supabase
+                    .from('patients')
+                    .select('id, avatar_url')
+                    .eq('id', ensured.patientId)
+                    .maybeSingle()
+                patient = refetched
+            }
+        }
 
         if (!patient) { setLoading(false); return }
 
