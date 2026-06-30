@@ -17,6 +17,10 @@ export interface EnsurePatientResult {
  * license. RLS allows the user to insert their own patient row (user_id = auth.uid()).
  *
  * Idempotent: if the record already exists, returns it without writing.
+ *
+ * IMPORTANT: only ever creates a record for role='patient' users. Caregivers
+ * legitimately own MANY patient rows (all sharing the caregiver's user_id),
+ * so auto-creating one for a caregiver would produce a phantom patient.
  */
 export async function ensurePatientForUser(
     userId: string,
@@ -33,6 +37,17 @@ export async function ensurePatientForUser(
         return { patientId: existing.id, created: false }
     }
 
+    // Guard: never auto-create a patient record for caregiver/family accounts.
+    const { data: profile } = await supabase
+        .from('users')
+        .select('role, name')
+        .eq('id', userId)
+        .maybeSingle()
+
+    if (profile && profile.role !== 'patient') {
+        return { patientId: null, created: false, reason: 'not-a-patient-role' }
+    }
+
     // 2. Find an active license owned by / assigned to this user (may be none)
     const { data: license } = await supabase
         .from('licenses')
@@ -41,16 +56,8 @@ export async function ensurePatientForUser(
         .eq('status', 'active')
         .maybeSingle()
 
-    // 3. Resolve a name (users table → fallback → email prefix is handled by caller)
-    let name = fallbackName?.trim() || ''
-    if (!name) {
-        const { data: profile } = await supabase
-            .from('users')
-            .select('name')
-            .eq('id', userId)
-            .maybeSingle()
-        name = profile?.name?.trim() || 'Paciente'
-    }
+    // 3. Resolve a name (caller fallback → profile name → generic)
+    const name = fallbackName?.trim() || profile?.name?.trim() || 'Paciente'
 
     // 4. Create the missing patient record (license_id may be null for manual signups)
     const { data: created, error } = await supabase
