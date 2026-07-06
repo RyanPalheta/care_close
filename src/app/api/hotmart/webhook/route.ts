@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import * as Sentry from '@sentry/nextjs'
 
 function getSupabaseAdmin() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -188,6 +189,7 @@ export async function POST(request: NextRequest) {
         })
     } catch (err) {
         console.error('Webhook error:', err)
+        Sentry.captureException(err, { tags: { route: 'hotmart-webhook' } })
         const message = err instanceof Error ? err.message : String(err)
         return NextResponse.json({ error: 'Internal server error', details: message }, { status: 500 })
     }

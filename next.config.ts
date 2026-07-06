@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const nextConfig: NextConfig = {
     // PWA headers for installability
@@ -16,4 +17,12 @@ const nextConfig: NextConfig = {
     },
 }
 
-export default nextConfig
+// Sentry wrapping is safe without a DSN — it just skips source-map upload.
+export default withSentryConfig(nextConfig, {
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    // Only uploads source maps when SENTRY_AUTH_TOKEN is present (CI/Vercel).
+    silent: !process.env.CI,
+    widenClientFileUpload: true,
+    disableLogger: true,
+})

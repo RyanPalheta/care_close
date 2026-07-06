@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import * as Sentry from '@sentry/nextjs'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -230,6 +231,15 @@ async function handle(request: NextRequest) {
                 .update({ notification_sent_at: new Date().toISOString() })
                 .eq('id', sched.id)
         }
+    }
+
+    // Surface any accumulated soft errors (push failures, per-user fetch errors)
+    // to Sentry so they're monitored even though the request returns 200.
+    if (errors.length > 0) {
+        Sentry.captureMessage(`Cron send-med-notifications had ${errors.length} error(s)`, {
+            level: 'warning',
+            extra: { errors: errors.slice(0, 20), sent: sentCount, failed: failedCount },
+        })
     }
 
     return NextResponse.json({
