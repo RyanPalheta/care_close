@@ -6,6 +6,38 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
+ * scheduled_time is stored as a naive wall-clock forced into UTC — e.g.
+ * "2026-05-27T08:00:00+00" actually means "08:00 in the user's local time".
+ * This reinterprets that wall-clock in the given IANA timezone and returns the
+ * TRUE epoch (ms) the medication is due. Brazil has no DST, so this is stable.
+ */
+function intendedInstantMs(scheduledTimeIso: string, timeZone: string): number {
+    const d = new Date(scheduledTimeIso)
+    const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+    const parts = dtf.formatToParts(d)
+    const map: Record<string, string> = {}
+    for (const p of parts) map[p.type] = p.value
+    const asUTC = Date.UTC(+map.year, +map.month - 1, +map.day, +map.hour, +map.minute, +map.second)
+    const offsetMin = (asUTC - d.getTime()) / 60000
+    return d.getTime() - offsetMin * 60000
+}
+
+/** Format the stored wall-clock (HH:MM) without any timezone shift. */
+function wallClockLabel(scheduledTimeIso: string): string {
+    try {
+        return new Intl.DateTimeFormat('pt-BR', {
+            hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+        }).format(new Date(scheduledTimeIso))
+    } catch {
+        return scheduledTimeIso.slice(11, 16)
+    }
+}
+
+/**
  * GET/POST /api/cron/send-med-notifications
  *
  * Cron worker that fires medication reminder push notifications.
@@ -86,8 +118,17 @@ async function handle(request: NextRequest) {
         // Use the largest lead time among the user's devices
         const leadMin = Math.max(...userSubs.map(s => s.lead_minutes || 5))
 
-        // Window: now → now + leadMin + 1min buffer (cron may run slightly late)
-        const windowEnd = new Date(now.getTime() + (leadMin + 1) * 60 * 1000)
+        // Timezone the schedules should be interpreted in (recipient's device).
+        // Defaults to Brasília if unknown.
+        const userTz = userSubs.find(s => s.timezone)?.timezone || 'America/Sao_Paulo'
+
+        // A notification is due when the med's intended instant falls in
+        // [now, now + leadMin + 1min]. Because scheduled_time is a naive
+        // wall-clock, its stored value sits up to ~14h away from the intended
+        // instant, so we fetch a wide DB window and filter precisely in JS.
+        const windowEndMs = now.getTime() + (leadMin + 1) * 60 * 1000
+        const fetchFrom = new Date(now.getTime() - 14 * 60 * 60 * 1000).toISOString()
+        const fetchTo = new Date(now.getTime() + 14 * 60 * 60 * 1000).toISOString()
 
         // Find patient records associated with this user (either patient.user_id or caregiver via licenses)
         const patientIds: string[] = []
@@ -116,8 +157,9 @@ async function handle(request: NextRequest) {
 
         if (patientIds.length === 0) continue
 
-        // 2. Find due medications
-        const { data: dueScheds, error: schedErr } = await admin
+        // 2. Fetch candidate schedules in a wide window, then filter by the
+        //    intended instant (wall-clock reinterpreted in the user's timezone).
+        const { data: candidates, error: schedErr } = await admin
             .from('medication_schedules')
             .select(`
                 id, scheduled_time, patient_id,
@@ -127,35 +169,30 @@ async function handle(request: NextRequest) {
             .in('patient_id', Array.from(new Set(patientIds)))
             .eq('status', 'pending')
             .is('notification_sent_at', null)
-            .gte('scheduled_time', now.toISOString())
-            .lt('scheduled_time', windowEnd.toISOString())
+            .gte('scheduled_time', fetchFrom)
+            .lt('scheduled_time', fetchTo)
 
         if (schedErr) {
             errors.push(`Schedules fetch for ${userId}: ${schedErr.message}`)
             continue
         }
 
-        if (!dueScheds || dueScheds.length === 0) continue
+        const dueScheds = (candidates || []).filter(s => {
+            const due = intendedInstantMs(s.scheduled_time, userTz)
+            return due >= now.getTime() && due < windowEndMs
+        })
+
+        if (dueScheds.length === 0) continue
 
         // 3. Send push for each due schedule, to each device of the user
         for (const sched of dueScheds as any[]) {
             const med = sched.medication
             const patient = sched.patient
 
-            for (const sub of userSubs) {
-                // Format time in this device's timezone
-                const tz = sub.timezone || 'America/Sao_Paulo'
-                let time: string
-                try {
-                    time = new Intl.DateTimeFormat('pt-BR', {
-                        hour: '2-digit', minute: '2-digit', timeZone: tz,
-                    }).format(new Date(sched.scheduled_time))
-                } catch {
-                    time = new Date(sched.scheduled_time).toLocaleTimeString('pt-BR', {
-                        hour: '2-digit', minute: '2-digit',
-                    })
-                }
+            // scheduled_time is a naive wall-clock, so show it as-is (no shift)
+            const time = wallClockLabel(sched.scheduled_time)
 
+            for (const sub of userSubs) {
                 const payload = JSON.stringify({
                     title: `💊 ${med?.name || 'Medicamento'}`,
                     body: patient?.name
