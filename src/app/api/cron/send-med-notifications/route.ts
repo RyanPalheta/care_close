@@ -209,7 +209,13 @@ async function handle(request: NextRequest) {
                     await webpush.sendNotification({
                         endpoint: sub.endpoint,
                         keys: { p256dh: sub.p256dh, auth: sub.auth },
-                    }, payload)
+                    }, payload, {
+                        // High urgency asks FCM to wake a dozing device now;
+                        // TTL 30min drops the push instead of delivering a stale
+                        // "hora do remédio" an hour late.
+                        urgency: 'high',
+                        TTL: 1800,
+                    })
                     sentCount++
                 } catch (err: any) {
                     failedCount++
