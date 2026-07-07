@@ -20,7 +20,7 @@ self.addEventListener('push', (event) => {
         renotify: true,
         requireInteraction: true,
         actions: [
-            { action: 'confirm', title: '✅ Tomado' },
+            { action: 'confirm', title: 'Já tomei ✓' },
         ],
         data: { url: confirmUrl, scheduleId },
     };

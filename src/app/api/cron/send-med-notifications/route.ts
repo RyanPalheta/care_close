@@ -194,11 +194,12 @@ async function handle(request: NextRequest) {
             const time = wallClockLabel(sched.scheduled_time)
 
             for (const sub of userSubs) {
+                const dose = `${med?.dosage || ''} ${med?.unit || ''}`.trim()
                 const payload = JSON.stringify({
-                    title: `💊 ${med?.name || 'Medicamento'}`,
+                    title: `⏰ Está na hora do remédio`,
                     body: patient?.name
-                        ? `${patient.name} — ${med?.dosage || ''} ${med?.unit || ''} às ${time}`
-                        : `${med?.dosage || ''} ${med?.unit || ''} às ${time}`,
+                        ? `${patient.name}: tomar ${med?.name || 'medicamento'}${dose ? ` (${dose})` : ''} — ${time}`
+                        : `Tomar ${med?.name || 'seu medicamento'}${dose ? ` (${dose})` : ''} — ${time}`,
                     tag: `med-${sched.id}`,
                     url: `/patient/home?confirm=${sched.id}`,
                     scheduleId: sched.id,
