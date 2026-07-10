@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
-import { registerServiceWorker } from '@/lib/push-notifications'
+import { registerServiceWorker, syncPushSubscription } from '@/lib/push-notifications'
 import { IconHome, IconCalendar, IconBarChart, IconSettings, IconClock, IconCheckCircle, IconXCircle, IconPill, IconPlus } from '@/components/Icons'
 
 interface PatientWithStats {
@@ -110,6 +110,9 @@ export default function CaregiverHomePage() {
 
         // Ensure SW is registered — actual push scheduling is server-driven via cron
         registerServiceWorker()
+        // Self-heal: re-persist this device's push subscription if permission
+        // is already granted (covers pruned/rotated subscriptions).
+        syncPushSubscription()
     }, [user])
 
     useEffect(() => {

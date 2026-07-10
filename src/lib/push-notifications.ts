@@ -29,6 +29,26 @@ function urlBase64ToArrayBuffer(base64: string): ArrayBuffer {
     return buf
 }
 
+/**
+ * Silent self-heal: if the user already granted notification permission,
+ * re-subscribe and re-persist the subscription on the server. Covers devices
+ * whose subscription was pruned (410 Gone) or rotated by the browser — they
+ * would otherwise silently stop receiving reminders forever.
+ * No-op (no permission prompt) when permission isn't granted yet.
+ */
+export async function syncPushSubscription(): Promise<void> {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    try {
+        const saved = localStorage.getItem('cc_notif_lead_minutes')
+        const lead = saved ? parseInt(saved) : 5
+        const r = await enablePushNotifications(Number.isFinite(lead) ? lead : 5)
+        if (!r.ok) console.warn('syncPushSubscription failed:', r.reason)
+    } catch (e) {
+        console.warn('syncPushSubscription error:', e)
+    }
+}
+
 /** Subscribe + persist on server. Returns true on success. */
 export async function enablePushNotifications(leadMinutes = 5): Promise<{ ok: boolean; reason?: string }> {
     if (typeof window === 'undefined') return { ok: false, reason: 'ssr' }

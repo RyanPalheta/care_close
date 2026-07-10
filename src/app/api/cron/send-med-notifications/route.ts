@@ -193,6 +193,8 @@ async function handle(request: NextRequest) {
             // scheduled_time is a naive wall-clock, so show it as-is (no shift)
             const time = wallClockLabel(sched.scheduled_time)
 
+            let deliveredToAtLeastOne = false
+
             for (const sub of userSubs) {
                 const dose = `${med?.dosage || ''} ${med?.unit || ''}`.trim()
                 const payload = JSON.stringify({
@@ -217,6 +219,7 @@ async function handle(request: NextRequest) {
                         TTL: 1800,
                     })
                     sentCount++
+                    deliveredToAtLeastOne = true
                 } catch (err: any) {
                     failedCount++
                     // 410 Gone or 404 = subscription expired, remove it
@@ -232,11 +235,17 @@ async function handle(request: NextRequest) {
                 }
             }
 
-            // Mark as sent
-            await admin
-                .from('medication_schedules')
-                .update({ notification_sent_at: new Date().toISOString() })
-                .eq('id', sched.id)
+            // Mark as sent ONLY if at least one device accepted the push.
+            // If every send failed (expired sub, push-service error), leave it
+            // null so the next cron run retries while the med is still due.
+            if (deliveredToAtLeastOne) {
+                await admin
+                    .from('medication_schedules')
+                    .update({ notification_sent_at: new Date().toISOString() })
+                    .eq('id', sched.id)
+            } else {
+                errors.push(`No device accepted push for schedule ${sched.id} (user ${userId})`)
+            }
         }
     }
 

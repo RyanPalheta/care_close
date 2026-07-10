@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
-import { registerServiceWorker } from '@/lib/push-notifications'
+import { registerServiceWorker, syncPushSubscription } from '@/lib/push-notifications'
 import { ensurePatientForUser } from '@/lib/ensure-patient'
 import {
     IconHome, IconPill, IconRoutine, IconBarChart,
@@ -93,6 +93,9 @@ export default function PatientHomePage() {
 
         // Ensure SW is registered — actual push scheduling is server-driven via cron
         registerServiceWorker()
+        // Self-heal: re-persist this device's push subscription if permission
+        // is already granted (covers pruned/rotated subscriptions).
+        syncPushSubscription()
     }, [user])
 
     useEffect(() => {
