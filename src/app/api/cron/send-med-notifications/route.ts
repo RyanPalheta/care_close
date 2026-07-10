@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import * as Sentry from '@sentry/nextjs'
 
@@ -36,6 +36,108 @@ function wallClockLabel(scheduledTimeIso: string): string {
     } catch {
         return scheduledTimeIso.slice(11, 16)
     }
+}
+
+/**
+ * Maps frequency + period to the wall-clock times of the day.
+ * KEEP IN SYNC with src/lib/schedule-generator.ts (client-side copy).
+ */
+function getScheduleTimes(frequency: string, period: string | null): Array<{ hour: number; minute: number }> {
+    if (period && period.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(period)
+            if (parsed.mode === 'time' && Array.isArray(parsed.times)) {
+                return parsed.times.map((t: string) => {
+                    const [h, m] = t.split(':').map(Number)
+                    return { hour: h || 0, minute: m || 0 }
+                })
+            }
+        } catch { /* fall through to meal-based */ }
+    }
+    const periodTimes: Record<string, { hour: number; minute: number }> = {
+        antes_cafe: { hour: 7, minute: 0 },
+        depois_cafe: { hour: 8, minute: 0 },
+        antes_almoco: { hour: 11, minute: 0 },
+        depois_almoco: { hour: 13, minute: 0 },
+        antes_jantar: { hour: 18, minute: 0 },
+        depois_jantar: { hour: 20, minute: 0 },
+    }
+    switch (frequency) {
+        case 'daily':
+            return [period && periodTimes[period] ? periodTimes[period] : { hour: 8, minute: 0 }]
+        case 'twice_day':
+            return [{ hour: 8, minute: 0 }, { hour: 20, minute: 0 }]
+        case 'three_day':
+            return [{ hour: 8, minute: 0 }, { hour: 14, minute: 0 }, { hour: 20, minute: 0 }]
+        case 'weekly':
+            return [{ hour: 8, minute: 0 }]
+        case 'as_needed':
+            return []
+        default:
+            return [{ hour: 8, minute: 0 }]
+    }
+}
+
+/**
+ * Server-side schedule generation. Previously schedules were only created when
+ * a user OPENED the app (generateAllSchedulesForPatient on home load) — so a
+ * user who didn't open the app before their first med of the day silently got
+ * no reminder (the cron had no row to send). The cron now guarantees today's
+ * and tomorrow's rows exist for every active medication, independent of app
+ * usage. Mirrors the client's dedupe rule: skip a med+day if ANY schedule
+ * already exists for that day.
+ */
+async function ensureSchedulesExist(admin: SupabaseClient): Promise<number> {
+    const { data: meds } = await admin
+        .from('medications')
+        .select('id, patient_id, frequency, period')
+        .eq('active', true)
+
+    if (!meds || meds.length === 0) return 0
+
+    const today = new Date()
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+    const dates = [today.toISOString().split('T')[0], tomorrow.toISOString().split('T')[0]]
+
+    const { data: existing } = await admin
+        .from('medication_schedules')
+        .select('medication_id, scheduled_time')
+        .gte('scheduled_time', `${dates[0]}T00:00:00`)
+        .lte('scheduled_time', `${dates[1]}T23:59:59`)
+
+    const have = new Set(
+        (existing || []).map((e: any) => `${e.medication_id}|${String(e.scheduled_time).slice(0, 10)}`)
+    )
+
+    const rows: any[] = []
+    for (const med of meds as any[]) {
+        const times = getScheduleTimes(med.frequency, med.period)
+        if (times.length === 0) continue
+        for (const date of dates) {
+            if (have.has(`${med.id}|${date}`)) continue
+            for (const t of times) {
+                rows.push({
+                    medication_id: med.id,
+                    patient_id: med.patient_id,
+                    scheduled_time: `${date}T${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}:00`,
+                    status: 'pending',
+                })
+            }
+        }
+    }
+
+    if (rows.length > 0) {
+        const { error } = await admin.from('medication_schedules').insert(rows)
+        if (error) {
+            console.error('ensureSchedulesExist insert failed:', error)
+            Sentry.captureMessage('Cron schedule generation failed', {
+                level: 'error',
+                extra: { error: error.message, attempted: rows.length },
+            })
+            return 0
+        }
+    }
+    return rows.length
 }
 
 /**
@@ -87,6 +189,10 @@ async function handle(request: NextRequest) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
+    // 0. Guarantee today's/tomorrow's schedule rows exist for every active
+    //    medication — reminders must not depend on the user opening the app.
+    const generated = await ensureSchedulesExist(admin)
+
     // 1. Get all push subscriptions
     const { data: subs, error: subsErr } = await admin
         .from('push_subscriptions')
@@ -98,7 +204,7 @@ async function handle(request: NextRequest) {
     }
 
     if (!subs || subs.length === 0) {
-        return NextResponse.json({ sent: 0, message: 'No subscriptions' })
+        return NextResponse.json({ sent: 0, generated, message: 'No subscriptions' })
     }
 
     const now = new Date()
@@ -262,6 +368,7 @@ async function handle(request: NextRequest) {
         sent: sentCount,
         failed: failedCount,
         removed: removedCount,
+        generated,
         errors: errors.slice(0, 5),
     })
 }
