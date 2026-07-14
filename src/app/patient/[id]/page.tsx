@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
+import { wallTime } from '@/lib/wall-clock'
 
 interface MedSchedule {
     id: string
@@ -181,7 +182,7 @@ export default function CaregiverPatientPage({ params }: { params: Promise<{ id:
     const progress = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0
 
     function formatTime(iso: string) {
-        return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return wallTime(iso)
     }
 
     return (

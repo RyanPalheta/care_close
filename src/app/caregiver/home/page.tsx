@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
 import { registerServiceWorker, syncPushSubscription } from '@/lib/push-notifications'
+import { wallTime } from '@/lib/wall-clock'
 import { IconHome, IconCalendar, IconBarChart, IconSettings, IconClock, IconCheckCircle, IconXCircle, IconPill, IconPlus } from '@/components/Icons'
 
 interface PatientWithStats {
@@ -82,7 +83,7 @@ export default function CaregiverHomePage() {
             let nextMed: string | null = null
             if (pending.length > 0) {
                 const p = pending[0] as any
-                const time = new Date(p.scheduled_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                const time = wallTime(p.scheduled_time)
                 nextMed = `${p.medication.name} ${time}`
             }
 

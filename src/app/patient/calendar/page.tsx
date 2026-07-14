@@ -9,6 +9,7 @@ import {
     IconChevronLeft, IconChevronRight, IconCheckCircle,
     IconXCircle, IconClock, IconSkip
 } from '@/components/Icons'
+import { wallTime } from '@/lib/wall-clock'
 
 interface DayData {
     date: string // YYYY-MM-DD
@@ -317,7 +318,7 @@ function CalendarContent() {
                                             <p className="text-xs text-gray-400">{s.medication.dosage} {s.medication.unit}</p>
                                         </div>
                                         <span className="text-xs text-gray-400 font-medium">
-                                            {new Date(s.scheduled_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                            {wallTime(s.scheduled_time)}
                                         </span>
                                     </div>
                                 ))}

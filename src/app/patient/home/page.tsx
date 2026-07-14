@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
 import { registerServiceWorker, syncPushSubscription } from '@/lib/push-notifications'
 import { ensurePatientForUser } from '@/lib/ensure-patient'
+import { wallTime } from '@/lib/wall-clock'
 import {
     IconHome, IconPill, IconRoutine, IconBarChart,
     IconCalendar, IconCheckCircle, IconClock, IconSkip, IconXCircle, IconX, IconBell, IconCamera
@@ -169,7 +170,7 @@ export default function PatientHomePage() {
     }
 
     function formatTime(iso: string) {
-        return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return wallTime(iso)
     }
 
     const userName = profile?.name?.split(' ')[0] ?? 'Você'

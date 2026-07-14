@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { IconHome, IconPill, IconRoutine, IconBarChart, IconCheckCircle, IconXCircle, IconSkip } from '@/components/Icons'
+import { wallTime } from '@/lib/wall-clock'
 
 interface ScheduleItem {
     id: string
@@ -109,9 +110,11 @@ function ReportsContent() {
         const grouped: Record<string, DayStats> = {}
 
         for (const item of medData ?? []) {
-            const d = new Date(item.scheduled_time)
-            const dateKey = d.toISOString().split('T')[0]
-            const dateLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+            // scheduled_time is a naive wall-clock — take date parts straight from
+            // the string so the label never shifts into the device timezone.
+            const dateKey = String(item.scheduled_time).slice(0, 10)
+            const [, mm, dd] = dateKey.split('-')
+            const dateLabel = `${dd}/${mm}`
             if (!grouped[dateKey]) grouped[dateKey] = { date: dateLabel, total: 0, taken: 0, missed: 0, skipped: 0 }
             grouped[dateKey].total++
             if (item.status === 'taken') grouped[dateKey].taken++
@@ -165,7 +168,7 @@ function ReportsContent() {
     const todayDate = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
 
     function formatTime(iso: string) {
-        return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return wallTime(iso)
     }
 
     const generateReportText = () => {

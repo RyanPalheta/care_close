@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { generateAllSchedulesForPatient } from '@/lib/schedule-generator'
+import { wallTime } from '@/lib/wall-clock'
 import {
     IconHome, IconCalendar, IconBell, IconSettings,
     IconClock, IconCheckCircle, IconPill, IconSkip,
@@ -128,7 +129,7 @@ export default function CaregiverSchedulePage() {
     }
 
     function formatTime(iso: string) {
-        return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return wallTime(iso)
     }
 
     const takenCount = schedules.filter(s => s.status === 'taken').length

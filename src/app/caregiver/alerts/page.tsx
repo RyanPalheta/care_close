@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { IconHome, IconCalendar, IconBarChart, IconSettings } from '@/components/Icons'
+import { wallTime, wallDate, wallClockAsLocalDate } from '@/lib/wall-clock'
 
 interface LateMedication {
     schedule_id: string
@@ -48,21 +49,27 @@ export default function CaregiverAlertsPage() {
         const patientIds = patients.map(p => p.id)
         const patientMap = Object.fromEntries(patients.map(p => [p.id, p.name]))
 
-        // Determine date range based on filter
+        // Determine date range based on filter.
+        // scheduled_time is a naive wall-clock, so every comparison must use the
+        // device's LOCAL wall-clock rendered in the same naive format — comparing
+        // against toISOString() (real UTC) flagged meds as late 3-4h early.
         const now = new Date()
-        const todayStr = now.toISOString().split('T')[0]
+        const pad = (n: number) => String(n).padStart(2, '0')
+        const toWall = (d: Date) =>
+            `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+        const nowWall = toWall(now)
         let startDate: string
 
         if (filter === 'today') {
-            startDate = `${todayStr}T00:00:00`
+            startDate = `${nowWall.split('T')[0]}T00:00:00`
         } else if (filter === 'week') {
             const weekAgo = new Date(now)
             weekAgo.setDate(weekAgo.getDate() - 7)
-            startDate = weekAgo.toISOString()
+            startDate = toWall(weekAgo)
         } else {
             const monthAgo = new Date(now)
             monthAgo.setDate(monthAgo.getDate() - 30)
-            startDate = monthAgo.toISOString()
+            startDate = toWall(monthAgo)
         }
 
         // Get missed/pending schedules that are past their time
@@ -72,7 +79,7 @@ export default function CaregiverAlertsPage() {
             .in('patient_id', patientIds)
             .in('status', ['pending', 'missed'])
             .gte('scheduled_time', startDate)
-            .lt('scheduled_time', now.toISOString())
+            .lt('scheduled_time', nowWall)
             .order('scheduled_time', { ascending: false })
 
         if (!schedules || schedules.length === 0) {
@@ -94,7 +101,9 @@ export default function CaregiverAlertsPage() {
 
         // Build late medications list
         const late: LateMedication[] = schedules.map(s => {
-            const scheduledDate = new Date(s.scheduled_time)
+            // Interpret the stored wall-clock in the device timezone — comparing
+            // the raw timestamptz against now inflated the delay by 3-4h.
+            const scheduledDate = wallClockAsLocalDate(s.scheduled_time)
             const hoursLate = Math.round((now.getTime() - scheduledDate.getTime()) / (1000 * 60 * 60))
             const med = medMap[s.medication_id] || { name: 'Medicamento', dosage: null }
 
@@ -137,11 +146,11 @@ export default function CaregiverAlertsPage() {
     }
 
     function formatTime(isoTime: string) {
-        return new Date(isoTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        return wallTime(isoTime)
     }
 
     function formatDate(isoTime: string) {
-        return new Date(isoTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        return wallDate(isoTime)
     }
 
     function getLateLabel(hours: number) {
